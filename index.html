@@ -2985,9 +2985,10 @@ function bindEvents(){
  * ============================================================ */
 async function bootstrap(){
   try {
+    const v = Date.now();
     const [wRes, sRes] = await Promise.all([
-      fetch('./data/weapons.json'),
-      fetch('./data/sites.json')
+      fetch('./data/weapons.json?v=' + v),
+      fetch('./data/sites.json?v=' + v)
     ]);
     if(!wRes.ok) throw new Error('weapons.json 加载失败：HTTP ' + wRes.status);
     if(!sRes.ok) throw new Error('sites.json 加载失败：HTTP ' + sRes.status);
