@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>终末地基质全收集优化器</title>
+<title>终末地基质全收集管理器</title>
 <script>
 (function(){
   try {
@@ -675,7 +675,7 @@ const DEFAULT_DATA = {
 let EXT_REGIONS = [];
 let EXT_WEAPONS = [];
 
-const STORAGE_KEY = 'zmd-optimizer-v10';
+const STORAGE_KEY = 'zmd-optimizer-v10';// 兼容历史数据，勿改
 const SNAPSHOT_PREFIX = STORAGE_KEY + '_snap_';
 const SNAPSHOT_MAX = 3;
 const EXPORT_REMIND_DAYS = 7;
@@ -2240,7 +2240,7 @@ function exportHistory(){
     version: 1,
     history
   };
-  const filename = `zmd-history-${new Date().toISOString().slice(0,10)}.json`;
+  const filename = `zmd-matrix-history-${new Date().toISOString().slice(0,10)}.json`;
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -2528,7 +2528,7 @@ function downloadJSON(obj, filename){
 }
 function handleExport(){
   const { weapons, ...rest } = state;
-  downloadJSON(rest, `zmd-optimizer-${new Date().toISOString().slice(0,10)}.json`);
+  downloadJSON(rest, `zmd-matrix-manager-${new Date().toISOString().slice(0,10)}.json`);
   localStorage.setItem(STORAGE_KEY + '_last_export', Date.now().toString());
   renderSettings();
   renderProgress();
