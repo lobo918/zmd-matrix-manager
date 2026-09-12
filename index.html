@@ -278,11 +278,12 @@ details summary::marker{color:var(--accent)}
 .weapon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;margin-top:12px}
 .weapon-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 12px;transition:background .15s, border-color .15s, box-shadow .2s;position:relative;}
 .weapon-card:hover{background:var(--card2);border-color:var(--border2);box-shadow:0 0 0 1px var(--accent-dim)}
-.weapon-card.is-complete{border-color:rgba(92,207,109,.4)}
+.weapon-card.is-complete{border-color:rgba(92,207,109,.5)}
 .weapon-card.is-complete::after{content:'✓';position:absolute;top:8px;right:12px;color:var(--ok);font-weight:700;font-size:16px;}
 .weapon-card.is-partial{border-color:rgba(230,185,92,.5)}
 .weapon-card.is-partial::after{content:'◐';position:absolute;top:8px;right:12px;color:var(--warn);font-weight:700;font-size:16px;}
 .weapon-card.is-partial .weapon-need{background:rgba(230,185,92,.08);border-color:rgba(230,185,92,.28)}
+.weapon-card.is-complete .weapon-need{background:rgba(92,207,109,.08);border-color:rgba(92,207,109,.28)}
 .weapon-card-head{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;margin-bottom:6px;padding-right:22px}
 .weapon-name{font-size:13.5px;font-weight:700;color:var(--text);letter-spacing:.3px}
 .weapon-type{font-size:10px;color:var(--dim);background:var(--card2);padding:1px 6px;border-radius:6px;letter-spacing:.3px;border:1px solid var(--border);}
