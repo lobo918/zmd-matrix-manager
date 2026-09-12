@@ -1,0 +1,3028 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>终末地基质全收集优化器</title>
+<script>
+(function(){
+  try {
+    if(localStorage.getItem('zmd-theme') === 'light'){
+      document.documentElement.setAttribute('data-theme','light');
+    }
+  } catch(e){}
+})();
+</script>
+<style>
+:root{
+  --bg:#0f1115;--card:#181b21;--card2:#21252c;--card3:#282d35;
+  --border:#2a2f38;--border2:#363d47;--text:#ececec;--text2:#b8bcc4;
+  --dim:#7c838d;--dim2:#5a6068;--accent:#5ba3ff;--accent-dim:#2c5f9c;
+  --ok:#5ccf6d;--bad:#f05545;--warn:#e6b95c;--gold:#e0b060;
+  --radius-lg:12px;--radius:8px;--radius-sm:5px;
+}
+[data-theme="light"]{
+  --bg:#f4f6f9;--card:#ffffff;--card2:#f1f4f8;--card3:#e5e9ef;
+  --border:#dde1e8;--border2:#c8cdd5;--text:#1a1d23;--text2:#4a5159;
+  --dim:#7c838d;--dim2:#9aa1ab;--accent:#3b7ed8;--accent-dim:#a9c8ec;
+  --ok:#3fa650;--bad:#d63a2c;--warn:#c9973a;--gold:#b08830;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{margin:0;height:100%;overflow:hidden}
+body{margin:0;height:100vh;height:100dvh;overflow:hidden;display:flex;flex-direction:column;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--bg);color:var(--text);font-size:12px;line-height:1.45;
+  letter-spacing:.15px;-webkit-font-smoothing:antialiased;}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#2e343d;border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:#3d444f}
+[data-theme="light"] ::-webkit-scrollbar-thumb{background:#c8cdd5}
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover{background:#a8afb8}
+.tabs{display:flex;background:var(--bg);border-bottom:1px solid var(--border);height:44px;flex-shrink:0}
+.tab{flex:1;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  font-weight:600;color:var(--dim);font-size:12.5px;letter-spacing:.5px;transition:color .18s;position:relative;}
+.tab:hover{color:var(--text2)}
+.tab.active{color:var(--accent)}
+.tab.active::after{content:'';position:absolute;bottom:-1px;left:20%;right:20%;height:2px;
+  background:var(--accent);border-radius:2px 2px 0 0;box-shadow:0 0 8px rgba(91,163,255,.5);}
+.page{display:none}
+.page.active{display:block;flex:1 1 0;min-height:0;overflow:auto}
+.card{background:var(--card);border-radius:var(--radius-lg);padding:12px 14px;border:1px solid var(--border);overflow:hidden}
+.card h3{margin:0 0 9px;font-size:11px;font-weight:600;letter-spacing:.6px;color:var(--text2);
+  text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;}
+.row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);gap:8px}
+.row:last-child{border-bottom:none}
+.row-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--text2)}
+.switch{position:relative;width:36px;height:20px;flex-shrink:0}
+.switch input{display:none}
+.slider{position:absolute;inset:0;background:#3a4049;border-radius:10px;transition:background .2s;cursor:pointer}
+.slider::before{content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.switch input:checked + .slider{background:var(--accent)}
+.switch input:checked + .slider::before{transform:translateX(16px)}
+[data-theme="light"] .slider{background:#c8cdd5}
+button{background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);
+  padding:6px 12px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:inherit;
+  letter-spacing:.3px;transition:background .15s, transform .1s;}
+button:hover{background:#4a92e8}
+button:active{transform:scale(.97)}
+button.secondary{background:var(--card3);color:var(--text2)}
+button.secondary:hover{background:#333a44;color:var(--text)}
+button.danger{background:var(--bad)}
+button.danger:hover{background:#d84535}
+button.small{padding:3px 8px;font-size:10.5px;font-weight:600}
+select,input[type=text],input[type=number]{background:var(--card2);color:var(--text);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:5px 8px;font-size:11.5px;font-family:inherit;
+  width:100%;transition:border-color .15s, background .15s;}
+select:focus,input:focus{outline:none;border-color:var(--accent);background:var(--card3)}
+select:disabled{opacity:.55;cursor:not-allowed;background:#1a1d22;color:var(--dim)}
+.lbl{font-size:10px;color:var(--dim);margin-bottom:3px;display:block;letter-spacing:.4px;text-transform:uppercase}
+.hint{color:var(--dim);font-size:11px;line-height:1.5}
+.empty{color:var(--dim);text-align:center;padding:14px;font-size:11.5px}
+.pill{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.3px;
+  padding:2px 7px;border-radius:8px;background:var(--card3);color:var(--text2);}
+.pill.ok{background:rgba(92,207,109,.16);color:var(--ok)}
+.pill.warn{background:rgba(230,185,92,.16);color:var(--warn)}
+.pill.bad{background:rgba(240,85,69,.16);color:var(--bad)}
+.pill.lock-pill{background:rgba(91,163,255,.16);color:var(--accent);font-weight:600}
+.pill.six-star{background:rgba(224,176,96,.16);color:var(--gold)}
+.progress-bar{height:5px;background:#232830;border-radius:3px;overflow:hidden;margin:6px 0}
+[data-theme="light"] .progress-bar{background:#e5e9ef}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#7ab8ff);
+  border-radius:3px;transition:width .4s ease;box-shadow:0 0 8px rgba(91,163,255,.4);}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  background:#2a2f38;color:var(--text);padding:9px 18px;border-radius:8px;
+  font-size:12px;z-index:500;opacity:0;transition:opacity .25s, transform .25s;
+  pointer-events:none;max-width:90vw;text-align:center;border:1px solid var(--border2);box-shadow:0 8px 24px rgba(0,0,0,.5);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-2px)}
+[data-theme="light"] .toast{background:#ffffff;box-shadow:0 8px 24px rgba(0,0,0,.15)}
+details summary{cursor:pointer;font-weight:600;padding:6px 0;user-select:none;font-size:12px;color:var(--text2);transition:color .15s}
+details summary:hover{color:var(--text)}
+details summary::marker{color:var(--accent)}
+
+#page-main.active{display:grid;grid-template-rows:minmax(0,1fr) auto auto;gap:8px;
+  padding:8px 12px;min-height:0;overflow-y:auto;}
+@media (max-width: 900px), (min-width: 901px) and (max-height: 720px){
+  html, body{height:auto;overflow:auto}
+  body{display:block;min-height:100vh}
+  .page.active{display:block;flex:none;height:auto;overflow:visible}
+  #page-main.active{display:block;overflow:visible;padding:8px 12px}
+  .main-top{display:block;overflow:visible;margin-bottom:8px}
+  .main-left{margin-bottom:8px;min-height:350px}
+  .main-right > .card:first-child{max-height:none}
+  .main-right > .card:last-child{min-height:auto}
+  .heatmap-wrapper{height:350px;overflow:auto}
+  .heatmap{min-width:640px}
+  .input-area{margin-top:8px;margin-bottom:8px}
+}
+.main-top{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:8px;min-height:0;overflow:hidden;}
+@media (max-width: 900px), (min-width: 901px) and (max-height: 720px){.main-top{grid-template-columns:1fr}}
+.main-left,.main-right{display:flex;flex-direction:column;gap:8px;min-height:0}
+.main-left > .card{flex:1;display:flex;flex-direction:column;min-height:0}
+.main-right > .card:first-child{flex:0 0 auto;display:flex;flex-direction:column;max-height:230px;padding:9px 11px;overflow:hidden;}
+.main-right > .card:first-child h3{margin:0 0 6px;flex-shrink:0}
+.rec-body{flex:1 1 auto;overflow-y:auto;min-height:0;line-height:1.4}
+.main-right > .card:first-child .rec-adopt{flex-shrink:0;margin-top:6px}
+.main-right > .card:last-child{flex:1 1 0;display:flex;flex-direction:column;min-height:120px;padding:9px 11px;overflow:hidden;}
+.main-right > .card:last-child .pending-list{flex:1;overflow-y:auto;min-height:0}
+.heatmap-wrapper{flex:1;overflow:auto;padding:4px 0 2px;min-height:0;position:relative}
+.heatmap{display:grid;grid-template-columns:80px repeat(14, minmax(22px, 1fr));gap:2px;width:100%;padding-top:4px;}
+.hm-col-header{font-size:10.5px;color:var(--text2);font-weight:600;display:flex;align-items:flex-end;justify-content:center;padding-bottom:5px;height:22px;letter-spacing:.3px;}
+.hm-row-header{font-size:10.5px;color:var(--text2);font-weight:500;display:flex;align-items:center;justify-content:flex-end;padding-right:7px;height:20px;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hm-cell{height:20px;display:flex;align-items:center;justify-content:center;gap:2px;cursor:pointer;border-radius:3px;transition:background .15s;position:relative}
+.hm-cell:hover{background:rgba(91,163,255,.18)}
+.hm-sq{width:5px;height:5px;border-radius:1.5px;background:#2a2f38;transition:background .15s}
+.hm-sq.low{background:#3c6b3f}.hm-sq.mid{background:#4a9a4a}
+.hm-sq.high{background:#5ccf6d;box-shadow:0 0 3px rgba(92,207,109,.7)}
+.hm-sq.master{background:#8dff90;box-shadow:0 0 5px rgba(141,255,144,1)}
+[data-theme="light"] .hm-sq{background:#c8cdd5}
+[data-theme="light"] .hm-sq.low{background:#9bc49d;box-shadow:none}
+[data-theme="light"] .hm-sq.mid{background:#6db27a;box-shadow:none}
+[data-theme="light"] .hm-sq.high{background:#4cae5c;box-shadow:0 0 3px rgba(76,174,92,.5)}
+[data-theme="light"] .hm-sq.master{background:#2e9a3e;box-shadow:0 0 5px rgba(46,154,62,.7)}
+.hm-tooltip{position:fixed;z-index:999;pointer-events:none;background:rgba(30, 34, 42, 0.95);
+  border:1px solid var(--border2);border-radius:var(--radius);padding:8px 12px;font-size:11px;
+  color:var(--text);line-height:1.6;box-shadow:0 8px 24px rgba(0,0,0,.6);
+  backdrop-filter:blur(4px);max-width:280px;white-space:pre-wrap;display:none;}
+.hm-tooltip b{color:var(--accent);font-weight:600}
+.hm-tooltip .ok{color:var(--ok)}
+[data-theme="light"] .hm-tooltip{background:rgba(255,255,255,.97);border-color:#c8cdd5;box-shadow:0 8px 24px rgba(0,0,0,.15)}
+.rec-region{font-size:10px;color:var(--dim);letter-spacing:.5px;text-transform:uppercase;margin-bottom:1px}
+.rec-site{font-size:13.5px;font-weight:700;color:var(--accent);margin:0 0 5px;letter-spacing:.2px;display:flex;align-items:center;gap:6px;}
+.rec-lock-row{display:flex;gap:6px;align-items:baseline;margin-bottom:2px;font-size:11px}
+.rec-lock-key{color:var(--dim);flex-shrink:0;font-size:10px;letter-spacing:.3px;min-width:44px}
+.rec-lock-val{color:var(--accent);font-weight:600;letter-spacing:.2px}
+.rec-stats{margin-top:5px;padding:5px 8px;background:var(--card2);border-radius:var(--radius);font-size:10.5px;color:var(--text2);line-height:1.5;border:1px solid var(--border);}
+.rec-stats b{color:var(--text);font-weight:600}
+.rec-stats .ok{color:var(--ok);font-weight:600}
+.rec-adopt{background:rgba(91,163,255,.12);border:1px solid var(--accent-dim);color:var(--accent);width:100%;font-weight:600;padding:6px 10px;font-size:11px;}
+.rec-adopt:hover{background:rgba(91,163,255,.2);border-color:var(--accent)}
+.uncov-warn{background:rgba(240,85,69,.1);border:1px solid rgba(240,85,69,.35);border-radius:var(--radius);padding:5px 8px;margin-top:6px;font-size:10.5px;color:#ff9a8e;line-height:1.4;}
+.uncov-warn b{color:#ff7a68}
+[data-theme="light"] .uncov-warn{color:#b22a1e}
+[data-theme="light"] .uncov-warn b{color:#d63a2c}
+.pending-list{max-height:100%;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.pending-item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 9px;background:var(--card2);border-radius:var(--radius-sm);font-size:11px;}
+.pending-item .pname{color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pending-item .plv{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--ok);font-weight:600;font-size:11px;flex-shrink:0}
+.input-area{background:var(--card);border-radius:var(--radius-lg);padding:10px 12px;border:1px solid var(--border);}
+.input-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;flex-wrap:wrap}
+.input-header h3{margin:0 !important;font-size:11px !important;text-transform:uppercase;color:var(--text2);letter-spacing:.6px}
+.input-header .controls{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.input-header .ctrl-item{min-width:110px}
+.input-matrix{display:grid;grid-template-columns:repeat(6, minmax(0, 1fr));gap:8px}
+@media (max-width:1000px){ .input-matrix{grid-template-columns:repeat(3, 1fr)} }
+@media (max-width:600px){ .input-matrix{grid-template-columns:repeat(2, 1fr)} }
+.matrix-item{background:var(--card2);border-radius:var(--radius);padding:7px 8px;border:1px solid var(--border);transition:background .2s, border-color .2s, box-shadow .2s;}
+.matrix-item .matrix-title{font-size:10.5px;color:var(--dim);font-weight:600;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;gap:6px;letter-spacing:.4px;line-height:1.2;}
+.matrix-item .result-label{font-size:10px;font-weight:700;letter-spacing:.3px}
+.matrix-item .matrix-line{display:grid;grid-template-columns:1fr 44px;gap:4px;margin-bottom:4px}
+.matrix-item .matrix-line:last-child{margin-bottom:0}
+.matrix-item select{padding:4px 6px;font-size:11px}
+.matrix-item.is-new{border-color:var(--ok);background:rgba(92,207,109,.1);box-shadow:0 0 0 1px var(--ok) inset, 0 0 12px rgba(92,207,109,.15);}
+.matrix-item.is-new .result-label{color:var(--ok)}
+.matrix-item.is-replace{border-color:var(--warn);background:rgba(230,185,92,.1);box-shadow:0 0 0 1px var(--warn) inset, 0 0 12px rgba(230,185,92,.15);}
+.matrix-item.is-replace .result-label{color:var(--warn)}
+.matrix-item.is-skip{border-color:var(--bad);background:rgba(240,85,69,.08);box-shadow:0 0 0 1px var(--bad) inset;opacity:.85;}
+.matrix-item.is-skip .result-label{color:var(--bad)}
+#page-detail.active{padding:12px}
+.detail-filters{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px}
+@media (max-width:600px){ .detail-filters{grid-template-columns:1fr} }
+.skill-block{background:var(--card);border-radius:var(--radius-lg);border:1px solid var(--border);margin-bottom:12px;overflow:hidden;scroll-margin-top:12px;transition:box-shadow .3s;}
+.skill-block.highlight{box-shadow:0 0 0 2px var(--accent), 0 0 24px rgba(91,163,255,.3)}
+.skill-block-header{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:linear-gradient(180deg,#1c2128,#171b21);border-bottom:1px solid var(--border);}
+[data-theme="light"] .skill-block-header{background:linear-gradient(180deg,#f7f9fc,#eef1f6)}
+.skill-block-name{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.4px}
+.skill-block-name::before{content:'';display:inline-block;width:3px;height:12px;background:var(--accent);border-radius:2px;margin-right:8px;vertical-align:-1px;box-shadow:0 0 6px var(--accent);}
+.skill-block-stats{font-size:11px;color:var(--dim);letter-spacing:.3px}
+.skill-block-stats b{color:var(--ok);font-weight:600;font-size:12px}
+.matrix-table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
+.matrix-table th,.matrix-table td{border:1px solid var(--border);text-align:center;padding:3px 2px;height:24px}
+.matrix-table th{background:#1a1e24;color:var(--dim);font-weight:500;font-size:10.5px;letter-spacing:.3px}
+[data-theme="light"] .matrix-table th{background:#eef1f6}
+.matrix-table th.row-head{text-align:right;padding-right:8px;background:#1a1e24;color:var(--gold);font-weight:500;font-size:10.5px;white-space:nowrap;width:80px;letter-spacing:.2px;}
+[data-theme="light"] .matrix-table th.row-head{background:#eef1f6}
+.matrix-table td{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--ok);font-weight:600;letter-spacing:.5px;font-size:11.5px;position:relative}
+.matrix-table td.empty{color:#252a31;font-weight:400}
+[data-theme="light"] .matrix-table td.empty{color:#d0d5dd}
+.matrix-table td.filled{background:rgba(92,207,109,.06);cursor:pointer;transition:background .12s}
+.matrix-table td.filled:hover{background:rgba(91,163,255,.18);outline:1px solid var(--accent)}
+.matrix-table td.master{background:rgba(141,255,144,.14);color:#8dff90}
+[data-theme="light"] .matrix-table td.master{color:#2e9a3e;background:rgba(46,154,62,.1)}
+.matrix-table tr:hover td:not(.empty){background:rgba(91,163,255,.07)}
+.matrix-table td .copy-badge{
+  position:absolute;top:0;right:0;font-size:8px;color:var(--warn);
+  background:rgba(230,185,92,.2);padding:0 3px;border-radius:0 0 0 3px;
+  font-family:inherit;letter-spacing:0;font-weight:700;
+}
+.matrix-footer{display:flex;justify-content:space-between;padding:6px 14px;font-size:10px;color:var(--dim2);letter-spacing:.3px;border-top:1px solid var(--border);background:#15181d;}
+[data-theme="light"] .matrix-footer{background:#f7f9fc}
+.matrix-footer b{color:var(--ok);font-weight:600}
+.matrix-table td.dimmed{opacity:.22}
+.matrix-table th.dimmed{opacity:.35}
+#page-gaps.active{padding:12px}
+.gap-item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 12px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11.5px;margin-bottom:4px;transition:background .12s, border-color .12s;}
+.gap-item:hover{background:var(--card2);border-color:var(--border2)}
+.gap-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)}
+.gap-src{font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:var(--card3);letter-spacing:.3px;flex-shrink:0;}
+.gap-src.src-1{color:#ff7b7b;background:rgba(255,123,123,.14)}
+.gap-src.src-2{color:#ffb066;background:rgba(255,176,102,.14)}
+.gap-src.src-3{color:#e6d060;background:rgba(230,208,96,.14)}
+[data-theme="light"] .gap-src.src-1{color:#c93a2c;background:rgba(201,58,44,.12)}
+[data-theme="light"] .gap-src.src-2{color:#b46a1a;background:rgba(180,106,26,.12)}
+[data-theme="light"] .gap-src.src-3{color:#8f7a1a;background:rgba(143,122,26,.12)}
+.gap-src.src-more{color:var(--dim)}
+.gap-sites{font-size:10px;color:var(--dim);margin-left:8px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;}
+#page-history.active{padding:12px}
+.seven-day{display:flex;gap:6px;align-items:flex-end;height:90px;padding:6px 0 0}
+.seven-day .day{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;height:100%}
+.seven-day .bar{width:75%;background:linear-gradient(180deg,var(--accent),var(--accent-dim));border-radius:3px 3px 0 0;min-height:2px;transition:height .4s ease;box-shadow:0 0 6px rgba(91,163,255,.3);}
+.seven-day .lbl{font-size:9px;color:var(--dim);letter-spacing:.2px}
+.seven-day .cnt{font-size:9.5px;color:var(--text2);font-weight:600}
+.history-item{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 14px;margin-bottom:8px;}
+.history-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.history-time{font-size:11px;color:var(--text2);font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:.3px}
+.history-sum{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.history-row{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:5px 10px;border-radius:var(--radius-sm);background:var(--card2);font-size:11px;margin-bottom:4px;border:1px solid transparent;}
+.history-row:last-child{margin-bottom:0}
+.history-row.is-skip{opacity:.65}
+.history-row .h-name{flex:1;min-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)}
+.history-row .h-lv{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--ok);font-weight:600;letter-spacing:.4px}
+.history-row .h-val{color:var(--dim);font-size:10.5px}
+.history-row .h-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;white-space:nowrap;letter-spacing:.3px}
+.h-status.st-new{background:rgba(92,207,109,.16);color:var(--ok)}
+.h-status.st-rep{background:rgba(230,185,92,.16);color:var(--warn)}
+.h-status.st-skip{background:rgba(240,85,69,.14);color:var(--bad)}
+#page-settings.active{padding:12px}
+#page-settings .card{margin-bottom:10px}
+#page-settings .row{padding:8px 0}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:400;display:none;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px);}
+[data-theme="light"] .modal-overlay{background:rgba(15,17,21,.35)}
+.modal-overlay.show{display:flex;animation:fadeIn .15s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal-box{background:var(--card);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:16px 18px;min-width:320px;max-width:92vw;box-shadow:0 16px 48px rgba(0,0,0,.6), 0 0 0 1px rgba(91,163,255,.15);animation:slideUp .2s ease;}
+[data-theme="light"] .modal-box{box-shadow:0 16px 48px rgba(0,0,0,.15), 0 0 0 1px rgba(59,126,216,.15)}
+@keyframes slideUp{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-box h3{margin:0 0 4px;font-size:13px;color:var(--accent);font-weight:700;letter-spacing:.3px}
+.modal-key{font-size:11.5px;color:var(--text2);margin-bottom:12px;word-break:break-all;font-family:ui-monospace,Menlo,Consolas,monospace}
+.edit-row{display:grid;grid-template-columns:54px 1fr;gap:10px;align-items:center;margin-bottom:8px}
+.edit-row label{font-size:11px;color:var(--dim);letter-spacing:.4px;text-transform:uppercase}
+.edit-row select{padding:6px 8px;font-size:12px}
+.modal-cost{font-size:11px;color:var(--text2);margin-top:10px;padding:8px 10px;background:var(--card2);border-radius:var(--radius);line-height:1.5;border:1px solid var(--border);}
+.modal-cost b{color:var(--ok);font-weight:600}
+.modal-actions{display:flex;gap:6px;margin-top:14px;justify-content:flex-end;flex-wrap:wrap;align-items:center}
+.modal-actions .spacer{flex:1}
+#page-weapons.active{padding:12px}
+.weapon-summary{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;font-size:11px;color:var(--dim)}
+.weapon-summary b{color:var(--accent);font-size:13px}
+.weapon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px;margin-top:12px}
+.weapon-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 12px;transition:background .15s, border-color .15s, box-shadow .2s;position:relative;}
+.weapon-card:hover{background:var(--card2);border-color:var(--border2);box-shadow:0 0 0 1px var(--accent-dim)}
+.weapon-card.is-complete{border-color:rgba(92,207,109,.4)}
+.weapon-card.is-complete::after{content:'✓';position:absolute;top:8px;right:12px;color:var(--ok);font-weight:700;font-size:16px;}
+.weapon-card.is-partial{border-color:rgba(230,185,92,.5)}
+.weapon-card.is-partial::after{content:'◐';position:absolute;top:8px;right:12px;color:var(--warn);font-weight:700;font-size:16px;}
+.weapon-card.is-partial .weapon-need{background:rgba(230,185,92,.08);border-color:rgba(230,185,92,.28)}
+.weapon-card-head{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;margin-bottom:6px;padding-right:22px}
+.weapon-name{font-size:13.5px;font-weight:700;color:var(--text);letter-spacing:.3px}
+.weapon-type{font-size:10px;color:var(--dim);background:var(--card2);padding:1px 6px;border-radius:6px;letter-spacing:.3px;border:1px solid var(--border);}
+.weapon-category{font-size:10px;font-weight:600;padding:1px 7px;border-radius:6px;letter-spacing:.3px;}
+.weapon-category.cat-special{background:rgba(224,176,96,.16);color:var(--gold)}
+.weapon-category.cat-battlepass{background:rgba(155,120,255,.16);color:#b89aff}
+[data-theme="light"] .weapon-category.cat-battlepass{color:#6f4dd8}
+.weapon-owner{font-size:11px;color:var(--text2);margin-bottom:6px}
+.weapon-owner b{color:var(--accent);font-weight:600}
+.weapon-shared{font-size:10px;color:var(--dim);margin-bottom:6px;letter-spacing:.2px;line-height:1.5}
+.weapon-shared b{color:var(--accent);font-weight:600}
+.weapon-need{font-size:11px;color:var(--text2);padding:6px 9px;background:var(--card2);border-radius:var(--radius-sm);line-height:1.6;border:1px solid var(--border);}
+.weapon-need .need-row{display:flex;align-items:center;gap:6px;font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:.2px;}
+.weapon-need .need-status{font-weight:700;flex-shrink:0}
+.weapon-need .need-status.ok{color:var(--ok)}
+.weapon-need .need-status.partial{color:var(--warn)}
+.weapon-need .need-status.no{color:var(--bad)}
+.weapon-need .need-key{color:var(--text)}
+.weapon-need .need-lv{color:var(--dim);font-size:10px}
+.weapon-need .need-lv.partial{color:var(--warn);font-weight:700}
+.weapon-slots{display:inline-flex;gap:2px;align-items:center;margin-left:auto;flex-shrink:0}
+.weapon-slot{width:9px;height:9px;border-radius:2px;border:1px solid var(--border2);background:transparent;flex-shrink:0}
+.weapon-slot.master{background:var(--ok);border-color:var(--ok);box-shadow:0 0 3px rgba(92,207,109,.5)}
+.weapon-slot.partial{background:var(--warn);border-color:var(--warn)}
+.weapon-slot-count{font-size:10px;color:var(--dim);margin-left:5px;font-family:ui-monospace,monospace;letter-spacing:.3px}
+.weapon-slot-count.ok{color:var(--ok)}
+.weapon-slot-count.partial{color:var(--warn)}
+.weapon-slot-count.none{color:var(--bad)}
+.weapon-filters{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px}
+@media (max-width:600px){ .weapon-filters{grid-template-columns:1fr} }
+.need-actions{margin-top:6px;display:flex;justify-content:flex-end}
+.weapon-target-btn{padding:2px 9px;font-size:10px;font-weight:600;background:transparent;
+  color:var(--accent);border:1px solid var(--accent-dim);border-radius:6px;cursor:pointer;
+  transition:background .15s, color .15s, border-color .15s;letter-spacing:.3px;}
+.weapon-target-btn:hover{background:rgba(91,163,255,.15)}
+.weapon-target-btn.active{background:rgba(230,185,92,.15);color:var(--warn);border-color:rgba(230,185,92,.35)}
+.weapon-target-btn.active:hover{background:rgba(240,85,69,.15);color:var(--bad);border-color:rgba(240,85,69,.35)}
+.target-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center}
+.target-row select{padding:5px 8px;font-size:11.5px}
+.target-row button{padding:4px 9px;font-size:13px;line-height:1}
+.rec-targets{margin-top:6px;padding:6px 9px;background:var(--card2);border-radius:var(--radius);font-size:10.5px;line-height:1.6;border:1px solid var(--border)}
+.rec-targets-title{color:var(--text2);margin-bottom:3px;letter-spacing:.3px}
+.rec-targets-title b{color:var(--accent);font-weight:600}
+.rec-target-row{font-size:10.5px;letter-spacing:.2px;font-family:ui-monospace,Menlo,Consolas,monospace}
+.rec-target-row.hit{color:var(--ok)}
+.rec-target-row.miss{color:var(--bad)}
+.snapshot-item{display:flex;justify-content:space-between;align-items:center;gap:8px;
+  padding:6px 10px;background:var(--card2);border:1px solid var(--border);
+  border-radius:var(--radius-sm);font-size:11px;margin-bottom:4px}
+.snapshot-item .snap-time{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--text2)}
+.snapshot-item .snap-meta{color:var(--dim);font-size:10px;margin-left:6px}
+.region-header{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:8px 0;cursor:pointer;border-bottom:1px solid var(--border);user-select:none}
+.region-header:hover{background:rgba(91,163,255,.05)}
+.region-header .region-left{display:flex;align-items:center;gap:6px;font-weight:700;color:var(--accent);font-size:12.5px;letter-spacing:.4px}
+.region-header .region-toggle{color:var(--dim);font-size:10px;width:14px;text-align:center;transition:transform .15s}
+.region-header.collapsed .region-toggle{transform:rotate(-90deg)}
+.region-body{margin-left:8px}
+.load-error{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100vh;padding:20px;text-align:center;gap:12px;}
+.load-error h2{color:var(--bad);margin:0;font-size:18px;letter-spacing:.5px}
+.load-error p{color:var(--text2);max-width:520px;margin:0;font-size:13px;line-height:1.6}
+.load-error code{background:var(--card2);padding:2px 6px;border-radius:4px;color:var(--accent);
+  font-family:ui-monospace,monospace;font-size:12px}
+</style>
+</head>
+<body>
+
+<div class="tabs">
+  <div class="tab active" data-tab="main">主界面</div>
+  <div class="tab" data-tab="weapons">武器图鉴</div>
+  <div class="tab" data-tab="detail">详细清单</div>
+  <div class="tab" data-tab="gaps">缺口清单</div>
+  <div class="tab" data-tab="history">刷取历史</div>
+  <div class="tab" data-tab="settings">设置</div>
+</div>
+
+<div id="page-main" class="page active">
+  <div class="main-top">
+    <div class="main-left">
+      <div class="card">
+        <h3><span>收集进度</span><span class="pill" id="progressPill">0 / 840</span></h3>
+        <div class="heatmap-wrapper"><div id="heatmap" class="heatmap"></div></div>
+      </div>
+    </div>
+    <div class="main-right">
+      <div class="card">
+        <h3>
+          <span>推荐 <span class="pill warn" id="targetPill" style="display:none"></span></span>
+          <span style="display:flex;gap:6px">
+            <button id="targetsBtn" class="small secondary">⚙ 目标</button>
+            <button id="refreshBtn" class="small secondary">重算</button>
+          </span>
+        </h3>
+        <div id="recommendBody" class="rec-body">计算中…</div>
+        <button class="rec-adopt small" id="adoptRecBtn" style="display:none">采纳（预填并锁定字段）</button>
+      </div>
+      <div class="card">
+        <h3>
+          <span>待删除暂存区</span>
+          <span>
+            <button id="copyPendingBtn" class="small secondary">复制</button>
+            <button id="clearPendingBtn" class="small danger">清空</button>
+          </span>
+        </h3>
+        <div id="pendingDeletionsBox" class="empty">暂无</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <div class="input-header">
+      <h3>本次掉落录入 <span id="lockPill" class="pill lock-pill" style="display:none"></span></h3>
+      <div class="controls">
+        <div class="ctrl-item">
+          <label class="lbl">数量</label>
+          <select id="dropCount">
+            <option value="3">3（普通）</option>
+            <option value="6">6（双倍）</option>
+          </select>
+        </div>
+        <button id="submitDrop">提交</button>
+        <button id="clearDropBtn" class="secondary">清空</button>
+      </div>
+    </div>
+    <div id="dropForm" class="input-matrix"></div>
+  </div>
+
+  <div class="card" style="flex-shrink:0">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+      <span style="font-size:11px;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;font-weight:600">全局进度</span>
+      <span style="font-size:12px"><b id="collectedCount" style="color:var(--accent);font-size:14px">0</b> <span style="color:var(--dim)">/</span> <span id="totalCount" style="color:var(--text2)">840</span></span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div id="baseProgressRow" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;font-size:10.5px;color:var(--dim)"></div>
+    <div class="hint" id="etaHint" style="margin-top:4px;font-size:10.5px;color:var(--dim2)"></div>
+    <div class="hint" id="backupWarn" style="margin-top:4px;font-size:10.5px;color:var(--warn);display:none"></div>
+  </div>
+</div>
+
+<div id="page-detail" class="page">
+  <div class="card">
+    <h3><span>筛选</span></h3>
+    <div class="detail-filters">
+      <div><label class="lbl">基础属性</label><select id="detailFilterBase"><option value="">全部</option></select></div>
+      <div><label class="lbl">附加属性</label><select id="detailFilterAdd"><option value="">全部</option></select></div>
+      <div><label class="lbl">技能属性</label><select id="detailFilterSkill"><option value="">全部</option></select></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <div class="hint" id="detailStats">—</div>
+      <div class="hint">点击绿色格子可修改等级或删除</div>
+      <button id="detailClearFilter" class="small secondary">清除筛选</button>
+    </div>
+  </div>
+  <div id="detailContent" style="margin-top:12px"></div>
+</div>
+
+<div id="page-gaps" class="page">
+  <div class="card">
+    <h3><span>缺口清单 <span class="pill" id="gapPill">0</span></span>
+      <span style="display:flex;gap:6px">
+        <button id="gapCopyBtn" class="small secondary">复制当前列表</button>
+        <button id="gapRefreshBtn" class="small secondary">刷新</button>
+      </span>
+    </h3>
+    <div class="hint" style="margin-bottom:8px">按稀缺度升序：来源 1 表示当前只有 1 个启用点能产出，最优先补。</div>
+    <div class="detail-filters" style="grid-template-columns:repeat(4,1fr)">
+      <div><label class="lbl">基础</label><select id="gapFilterBase"><option value="">全部</option></select></div>
+      <div><label class="lbl">附加</label><select id="gapFilterAdd"><option value="">全部</option></select></div>
+      <div><label class="lbl">技能</label><select id="gapFilterSkill"><option value="">全部</option></select></div>
+      <div><label class="lbl">来源数</label>
+        <select id="gapFilterSource">
+          <option value="">全部</option>
+          <option value="1">= 1</option>
+          <option value="2">≤ 2</option>
+          <option value="3">≤ 3</option>
+          <option value="5">≤ 5</option>
+        </select>
+      </div>
+    </div>
+    <div id="gapUncoveredHint" class="hint" style="margin-top:8px"></div>
+  </div>
+  <div id="gapList" style="margin-top:12px"></div>
+</div>
+
+<div id="page-weapons" class="page">
+  <div class="card">
+    <h3><span>武器图鉴 <span class="pill six-star" id="weaponCountPill">0</span></span></h3>
+    <div class="hint" style="margin-bottom:8px">标注「专武」和「大月卡」两类武器，其余作为目标参考。</div>
+    <div class="weapon-summary">
+      <span>武器毕业进度：<b id="weaponComplete">0</b> / <span id="weaponTotal">0</span></span>
+      <span style="margin-left:auto"><button id="weaponRefreshBtn" class="small secondary">刷新</button></span>
+    </div>
+    <div class="weapon-filters">
+      <div><label class="lbl">武器类型</label>
+        <select id="weaponFilterType"><option value="">全部</option></select>
+      </div>
+      <div><label class="lbl">分类</label>
+        <select id="weaponFilterCategory">
+          <option value="">全部</option>
+          <option value="专武">专武</option>
+          <option value="大月卡">大月卡</option>
+          <option value="other">未标注</option>
+        </select>
+      </div>
+      <div><label class="lbl">收集状态</label>
+        <select id="weaponFilterStatus">
+          <option value="">全部</option>
+          <option value="complete">已毕业</option>
+          <option value="incomplete">未毕业</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div id="weaponGrid" class="weapon-grid"></div>
+</div>
+
+<div id="page-history" class="page">
+  <div class="card" style="flex-shrink:0">
+    <h3><span>最近 7 天新增</span></h3>
+    <div id="sevenDayChart" class="seven-day"></div>
+  </div>
+  <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px">
+    <h3 style="margin:0"><span>刷取历史 <span class="pill" id="historyPill">0 条</span></span></h3>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <select id="historyFilter" style="width:130px">
+        <option value="">全部记录</option>
+        <option value="hasNew">含新基质</option>
+        <option value="onlyDup">仅重复</option>
+      </select>
+      <button id="exportHistoryBtn" class="small secondary">导出历史</button>
+      <button id="clearHistoryBtn" class="small danger">清空历史</button>
+    </div>
+  </div>
+  <div id="historyContent" style="margin-top:12px"></div>
+  <div id="historyLoadMoreWrap" style="text-align:center;margin-top:12px;margin-bottom:12px"></div>
+</div>
+
+<div id="page-settings" class="page">
+  <div class="card">
+    <h3><span>外观</span></h3>
+    <div class="row">
+      <div class="row-label">主题</div>
+      <select id="themeSelect" style="width:140px">
+        <option value="dark">深色</option>
+        <option value="light">浅色</option>
+      </select>
+    </div>
+    <div class="hint" style="margin-top:6px">主题是浏览器本地偏好，不随导入/导出或数据快照迁移。</div>
+  </div>
+
+  <div class="card">
+    <h3><span>刷取点开关</span></h3>
+    <div class="hint" style="margin-bottom:8px">关闭的刷取点不参与推荐计算。点地区名折叠/展开。</div>
+    <div id="siteList"></div>
+  </div>
+
+  <div class="card">
+    <h3><span>推荐算法</span></h3>
+    <div class="row">
+      <div class="row-label">冲刺模式（对稀缺组合加权更高）</div>
+      <label class="switch"><input type="checkbox" id="sprintModeToggle"><span class="slider"></span></label>
+    </div>
+    <div class="hint" style="margin-top:6px">开启后，来源较少的组合权重会以平方计入；进度超过 85% 时也会自动启用。</div>
+    <div class="row" style="margin-top:10px">
+      <div class="row-label">额外保留份数（在武器需求基础上多留）</div>
+      <input type="number" id="extraCopiesInput" min="0" max="5" value="0" style="width:70px">
+    </div>
+    <div class="hint" style="margin-top:6px">例：某组合被 2 把武器需要，额外保留 1 份 → 容量 3 份。0 表示不额外留。</div>
+    <div class="row" style="margin-top:10px">
+      <div class="row-label">平分优先地区</div>
+      <select id="tieBreakerSelect" style="width:140px">
+        <option value="">不指定</option>
+      </select>
+    </div>
+    <div class="hint" style="margin-top:6px">推荐算法出现加权得分与空白数完全相同的候选时，优先选择指定地区的刷取点。</div>
+    <div class="row" style="margin-top:10px">
+      <div class="row-label">默认双倍刷取</div>
+      <label class="switch"><input type="checkbox" id="doubleDropToggle"><span class="slider"></span></label>
+    </div>
+    <div class="hint" style="margin-top:6px">开启后，主界面「数量」默认选中 6（双倍）。可在录入区临时切换，不影响本设置。</div>
+    <div class="row" style="margin-top:10px">
+      <div class="row-label">精确算法（2 步前瞻）</div>
+      <label class="switch"><input type="checkbox" id="exactAlgoToggle"><span class="slider"></span></label>
+    </div>
+    <div class="hint" style="margin-top:6px">开启后按当前「默认双倍」设置模拟掉落份数，对 Top-30 候选做第二步评估。计算约需 0.3~0.5 秒。</div>
+  </div>
+
+  <div class="card">
+    <h3><span>数据校验</span></h3>
+    <div class="hint" style="margin-bottom:8px">检查 collected 里是否有格式错误、等级越界、cost 不匹配、iid 缺失或重复、附加属性使用了简称。修复会改本地数据并自动打快照。</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="validateBtn" class="secondary">扫描</button>
+      <button id="validateFixAllBtn" class="danger" style="display:none">全部修复</button>
+    </div>
+    <div id="validateResult" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <h3><span>数据管理</span></h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="copyStateBtn" class="secondary">📋 一键复制 JSON</button>
+      <button id="exportBtn" class="secondary">导出 JSON</button>
+      <button id="importBtn" class="secondary">导入 JSON</button>
+      <input type="file" id="importFile" accept=".json" style="display:none">
+      <button id="snapshotBtn" class="secondary">创建快照</button>
+      <button id="resetSitesBtn" class="secondary">恢复默认刷取点</button>
+      <button id="resetAllBtn" class="danger">重置全部</button>
+    </div>
+    <div class="hint" id="backupHint" style="margin-top:8px"></div>
+    <div class="hint" id="sizeHint" style="margin-top:4px"></div>
+    <details style="margin-top:10px">
+      <summary>本地快照（最近 3 份）</summary>
+      <div class="hint" style="margin-top:6px;margin-bottom:8px">破坏性操作（重置全部 / 恢复默认刷取点 / 清空待删除 / 清空历史 / 导入 / 校验修复）前会自动打快照。快照仅存本地浏览器。</div>
+      <div id="snapshotList"></div>
+    </details>
+  </div>
+</div>
+
+<div class="modal-overlay" id="editModal">
+  <div class="modal-box">
+    <h3>修改强化等级</h3>
+    <div class="modal-key" id="editModalKey"></div>
+    <div class="edit-row"><label>基础</label><select id="editBaseLv"></select></div>
+    <div class="edit-row"><label>附加</label><select id="editAddLv"></select></div>
+    <div class="edit-row"><label>技能</label><select id="editSkillLv"></select></div>
+    <div class="modal-cost" id="editCostPreview"></div>
+    <div class="modal-actions">
+      <button id="editMaxBtn" class="secondary">一键升满</button>
+      <button id="editDeleteBtn" class="danger">删除记录</button>
+      <span class="spacer"></span>
+      <button id="editCancelBtn" class="secondary">取消</button>
+      <button id="editSaveBtn">保存</button>
+   </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="targetsModal">
+  <div class="modal-box" style="min-width:420px;max-width:min(560px,92vw)">
+    <h3>定向刷取目标</h3>
+    <div class="hint" style="margin-bottom:12px">填写 1~3 个目标组合。算法会优先选择能产出目标最多的刷取点；目标数相同再比全收集贡献。留空视为不设目标。</div>
+    <div id="targetsList"></div>
+    <div class="modal-actions">
+      <button id="targetsAddBtn" class="small secondary">+ 添加目标</button>
+      <button id="targetsClearBtn" class="small danger">清空全部</button>
+      <span class="spacer"></span>
+      <button id="targetsCancelBtn" class="secondary">取消</button>
+      <button id="targetsSaveBtn">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="hm-tooltip" id="hmTooltip"></div>
+
+<script>
+/* ============================================================
+ *  常量
+ * ============================================================ */
+const DEFAULT_DATA = {
+  baseAttrs: ['敏捷', '力量', '意志', '智识', '主能力'],
+  allAddAttrs: [
+    '攻击提升', '生命提升', '暴击率提升', '物理伤害提升',
+    '灼热伤害提升', '法术伤害提升', '自然伤害提升', '电磁伤害提升',
+    '寒冷伤害提升', '源石技艺提升', '治疗效率提升', '终结技充能效率提升'
+  ],
+  addAliases: {
+    '终结技效率提升': '终结技充能效率提升',
+    '攻击': '攻击提升', '生命': '生命提升', '暴击': '暴击率提升',
+    '物理': '物理伤害提升', '灼热': '灼热伤害提升', '法术': '法术伤害提升',
+    '自然': '自然伤害提升', '电磁': '电磁伤害提升', '寒冷': '寒冷伤害提升',
+    '源石': '源石技艺提升', '治疗': '治疗效率提升', '终结': '终结技充能效率提升'
+  },
+  allSkillAttrs: [
+    '强攻', '压制', '追袭', '粉碎', '昂扬', '巧技', '残暴',
+    '附术', '医疗', '切骨', '迸发', '夜幕', '流转', '效益'
+  ],
+  levelConfig: {
+    base:  { max: 6, costs: { 1: 30,  2: 60,  3: 120, 4: 250, 5: 450 } },
+    add:   { max: 6, costs: { 1: 30,  2: 60,  3: 120, 4: 250, 5: 450 } },
+    skill: { max: 3, costs: { 1: 120, 2: 300 } }
+  },
+  dropLevels: {
+    base:  [1, 2, 3, 4],
+    add:   [1, 2, 3, 4],
+    skill: [1, 2, 3]
+  }
+};
+
+let EXT_REGIONS = [];
+let EXT_WEAPONS = [];
+
+const STORAGE_KEY = 'zmd-optimizer-v10';
+const SNAPSHOT_PREFIX = STORAGE_KEY + '_snap_';
+const SNAPSHOT_MAX = 3;
+const EXPORT_REMIND_DAYS = 7;
+const STORAGE_WARN_BYTES = 4 * 1024 * 1024;
+const EXACT_ALGO_TOP_N = 30;
+const SECOND_PASS_DISCOUNT = 0.5;
+const HISTORY_PAGE_SIZE = 20;
+const NEW_BASE_ORDER = ['敏捷', '力量', '意志', '智识', '主能力'];
+const deepClone = o => JSON.parse(JSON.stringify(o));
+
+/* ============================================================
+ *  状态
+ * ============================================================ */
+function defaultState(){
+  const d = deepClone(DEFAULT_DATA);
+  d.regions = deepClone(EXT_REGIONS);
+  return {
+    data: d,
+    enabledSites: {},
+    collected: {},
+    pendingDeletions: [],
+    history: [],
+    sprintMode: false,
+    extraCopies: 0,
+    tieBreaker: '',
+    doubleDrop: false,
+    exactAlgo: false,
+    collapsedRegions: {},
+    targets: [],
+    weapons: deepClone(EXT_WEAPONS)
+  };
+}
+function migrateData(d){
+  if(!d) return d;
+  if(d.baseAttrs && d.baseAttrs.length === 5 && NEW_BASE_ORDER.every(b => d.baseAttrs.includes(b))){
+    d.baseAttrs = NEW_BASE_ORDER.slice();
+  }
+  if(!d.addAliases) d.addAliases = DEFAULT_DATA.addAliases;
+  return d;
+}
+function cleanEnabledSites(s){
+  if(!s.enabledSites || !s.data || !Array.isArray(s.data.regions)) return;
+  const valid = new Set();
+  s.data.regions.forEach(r => r.sites.forEach(site => valid.add(r.name + '::' + site.name)));
+  for(const k in s.enabledSites){
+    if(!valid.has(k)) delete s.enabledSites[k];
+  }
+}
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const s = JSON.parse(raw);
+      if(!s.data) s.data = deepClone(DEFAULT_DATA);
+      migrateData(s.data);
+      s.data.regions = deepClone(EXT_REGIONS);
+      if(!s.enabledSites) s.enabledSites = {};
+      if(!s.collected) s.collected = {};
+      if(!s.pendingDeletions) s.pendingDeletions = [];
+      if(!s.history) s.history = [];
+      if(typeof s.sprintMode !== 'boolean') s.sprintMode = false;
+      if(typeof s.extraCopies !== 'number') s.extraCopies = 0;
+      if(typeof s.tieBreaker !== 'string') s.tieBreaker = '';
+      if(typeof s.doubleDrop !== 'boolean') s.doubleDrop = false;
+      if(typeof s.exactAlgo !== 'boolean') s.exactAlgo = false;
+      if(!s.collapsedRegions || typeof s.collapsedRegions !== 'object') s.collapsedRegions = {};
+      if(!Array.isArray(s.targets)) s.targets = [];
+      if(s.tieBreaker && !s.data.regions.some(r => r.name === s.tieBreaker)) s.tieBreaker = '';
+      s.weapons = deepClone(EXT_WEAPONS);
+      cleanEnabledSites(s);
+      return s;
+    }
+  }catch(e){ console.warn(e); }
+  return defaultState();
+}
+let state = null;
+let currentLock = null;
+let currentEditKey = null;
+let currentEditIndex = 0;
+let currentRec = null;
+let _demandCache = null;
+let _collectedView = null;
+let _lastGapList = [];
+let _historyPage = 1;
+
+/* ============================================================
+ *  命名统一
+ * ============================================================ */
+function toFullAdd(name){
+  if(!name) return '';
+  if(state.data.allAddAttrs.includes(name)) return name;
+  const aliases = state.data.addAliases || {};
+  if(aliases[name]) return aliases[name];
+  const full = state.data.allAddAttrs.find(a => a.startsWith(name));
+  return full || name;
+}
+function toShortAdd(name){
+  if(!name) return '';
+  const aliases = state.data.addAliases || {};
+  for(const short in aliases){
+    if(aliases[short] === name) return short;
+  }
+  return name;
+}
+function toFullBase(name){ return name || ''; }
+function toFullSkill(name){ return name || ''; }
+function makeKey(b, a, s){
+  return toFullBase(b) + '|' + toFullAdd(a) + '|' + toFullSkill(s);
+}
+const siteKey = (r, s) => r + '::' + s;
+
+function newIid(){
+  return 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+/* ============================================================
+ *  多副本核心工具
+ * ============================================================ */
+function buildWeaponDemandMap(){
+  if(_demandCache) return _demandCache;
+  const map = {};
+  (state.weapons || []).forEach(w => {
+    const k = makeKey(w.base, w.add, w.skill);
+    map[k] = (map[k] || 0) + 1;
+  });
+  _demandCache = map;
+  return map;
+}
+function invalidateDemandCache(){ _demandCache = null; }
+
+function getCapacity(key){
+  const demand = buildWeaponDemandMap()[key] || 1;
+  const extra = state.extraCopies || 0;
+  return Math.max(1, demand + extra);
+}
+function getCollectedArr(key){
+  const c = _collectedView || state.collected;
+  const v = c[key];
+  if(!v) return [];
+  return Array.isArray(v) ? v : [v];
+}
+function setCollectedArr(key, arr){
+  if(!arr || arr.length === 0) delete state.collected[key];
+  else state.collected[key] = arr;
+}
+function hasCollected(key){ return getCollectedArr(key).length > 0; }
+function isKeySaturated(key){ return getCollectedArr(key).length >= getCapacity(key); }
+function getBestItem(key){
+  const arr = getCollectedArr(key);
+  if(!arr.length) return null;
+  return arr.reduce((b, x) => x.cost < b.cost ? x : b, arr[0]);
+}
+function getWorstIndex(arr){
+  if(!arr.length) return -1;
+  let idx = 0;
+  for(let i = 1; i < arr.length; i++){
+    if(arr[i].cost > arr[idx].cost) idx = i;
+  }
+  return idx;
+}
+function bestSqClass(key){
+  const best = getBestItem(key);
+  if(!best) return '';
+  const c = best.cost;
+  if(c <= 0) return 'master';
+  if(c < 500) return 'high';
+  if(c < 1500) return 'mid';
+  return 'low';
+}
+
+/* ============================================================
+ *  迁移
+ * ============================================================ */
+function migrateNames(){
+  let changed = false;
+  if(state.collected){
+    const newCollected = {};
+    for(const key in state.collected){
+      const parts = String(key).split('|');
+      if(parts.length !== 3){ newCollected[key] = state.collected[key]; continue; }
+      const nk = makeKey(parts[0], parts[1], parts[2]);
+      const v = state.collected[key];
+      const arr = Array.isArray(v) ? v : [v];
+      arr.forEach(inst => { if(!inst.iid) inst.iid = newIid(); });
+      newCollected[nk] = arr;
+      if(nk !== key) changed = true;
+      if(!Array.isArray(v)) changed = true;
+    }
+    state.collected = newCollected;
+  }
+  if(state.pendingDeletions){
+    state.pendingDeletions.forEach(p => {
+      if(!p.key) return;
+      const parts = String(p.key).split('|');
+      if(parts.length !== 3) return;
+      const nk = makeKey(parts[0], parts[1], parts[2]);
+      if(nk !== p.key){ p.key = nk; changed = true; }
+    });
+  }
+  if(state.weapons){
+    state.weapons.forEach(w => {
+      const nb = toFullBase(w.base), na = toFullAdd(w.add), ns = toFullSkill(w.skill);
+      if(nb !== w.base || na !== w.add || ns !== w.skill){
+        w.base = nb; w.add = na; w.skill = ns; changed = true;
+      }
+    });
+  }
+  if(state.history){
+    state.history.forEach(h => {
+      if(h.items){
+        h.items.forEach(it => {
+          const nb = toFullBase(it.base), na = toFullAdd(it.add), ns = toFullSkill(it.skill);
+          if(nb !== it.base || na !== it.add || ns !== it.skill){
+            it.base = nb; it.add = na; it.skill = ns; changed = true;
+          }
+        });
+      }
+      if(h.results){
+        h.results.forEach(r => {
+          if(!r.key) return;
+          const parts = String(r.key).split('|');
+          if(parts.length !== 3) return;
+          const nk = makeKey(parts[0], parts[1], parts[2]);
+          if(nk !== r.key){ r.key = nk; changed = true; }
+        });
+      }
+    });
+  }
+  if(state.data && state.data.regions){
+    state.data.regions.forEach(r => {
+      r.sites.forEach(s => {
+        if(s.adds) s.adds = s.adds.map(toFullAdd);
+        if(s.skills) s.skills = s.skills.map(toFullSkill);
+      });
+    });
+  }
+  if(changed){
+    try{
+      const { weapons, ...rest } = state;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
+    }catch(e){ console.warn('迁移保存失败', e); }
+  }
+}
+
+function saveState(){
+  invalidateDemandCache();
+  try{
+    const { weapons, ...rest } = state;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
+  }
+  catch(e){ toast('保存失败：'+e.message); }
+}
+
+function getAllSites(){
+  const out = [];
+  state.data.regions.forEach(r => r.sites.forEach(s => out.push({
+    region: r.name, name: s.name, adds: s.adds, skills: s.skills, key: siteKey(r.name, s.name)
+  })));
+  return out;
+}
+const isSiteEnabled = k => state.enabledSites[k] !== false;
+
+function combinations(arr, k){
+  const res = [];
+  (function h(start, cur){
+    if(cur.length === k){ res.push(cur.slice()); return; }
+    for(let i = start; i < arr.length; i++){ cur.push(arr[i]); h(i+1, cur); cur.pop(); }
+  })(0, []);
+  return res;
+}
+function remainingCost(type, level){
+  const cfg = state.data.levelConfig[type];
+  let t = 0;
+  for(let lv = level; lv < cfg.max; lv++) t += cfg.costs[lv] || 0;
+  return t;
+}
+const totalCost = (b, a, s) => remainingCost('base', b) + remainingCost('add', a) + remainingCost('skill', s);
+const totalCombinations = () => state.data.baseAttrs.length * state.data.allAddAttrs.length * state.data.allSkillAttrs.length;
+
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 1600);
+}
+
+function buildSourceMap(enabledSites){
+  const map = {};
+  for(const site of enabledSites){
+    for(const add of site.adds){
+      for(const skill of site.skills){
+        const k = add + '|' + skill;
+        if(!map[k]) map[k] = [];
+        map[k].push(site.name);
+      }
+    }
+  }
+  return map;
+}
+const getSrc = (map, a, s) => {
+  const v = map[a + '|' + s];
+  return v ? v.length : 0;
+};
+const getSites = (map, a, s) => map[a + '|' + s] || [];
+const srcClass = n => (n === 1 ? 'src-1' : n === 2 ? 'src-2' : n === 3 ? 'src-3' : 'src-more');
+
+/* ============================================================
+ *  主题
+ * ============================================================ */
+function applyTheme(theme){
+  if(theme === 'light'){
+    document.documentElement.setAttribute('data-theme','light');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+}
+function getStoredTheme(){
+  try { return localStorage.getItem('zmd-theme') || 'dark'; }
+  catch(e){ return 'dark'; }
+}
+
+/* ============================================================
+ *  快照
+ * ============================================================ */
+function makeSnapshot(reason){
+  try {
+    const { weapons, ...rest } = state;
+    const ts = Date.now();
+    const payload = { ts, reason, data: rest };
+    localStorage.setItem(SNAPSHOT_PREFIX + ts, JSON.stringify(payload));
+    pruneSnapshots();
+  } catch(e) {
+    console.warn('快照失败', e);
+  }
+}
+function listSnapshots(){
+  const out = [];
+  for(let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i);
+    if(k && k.startsWith(SNAPSHOT_PREFIX)){
+      try {
+        const payload = JSON.parse(localStorage.getItem(k));
+        out.push({
+          key: k, ts: payload.ts,
+          reason: payload.reason || '',
+          size: (localStorage.getItem(k) || '').length * 2
+        });
+      } catch(e){}
+    }
+  }
+  out.sort((a, b) => b.ts - a.ts);
+  return out;
+}
+function pruneSnapshots(){
+  const list = listSnapshots();
+  list.slice(SNAPSHOT_MAX).forEach(s => localStorage.removeItem(s.key));
+}
+function restoreSnapshot(ts){
+  const raw = localStorage.getItem(SNAPSHOT_PREFIX + ts);
+  if(!raw){ toast('快照不存在'); return; }
+  if(!confirm('从快照恢复？当前数据会被覆盖。')) return;
+  try {
+    const payload = JSON.parse(raw);
+    const restored = payload.data;
+    restored.weapons = deepClone(EXT_WEAPONS);
+    if(!restored.data) restored.data = deepClone(DEFAULT_DATA);
+    restored.data.regions = deepClone(EXT_REGIONS);
+    if(!restored.enabledSites) restored.enabledSites = {};
+    if(!restored.collected) restored.collected = {};
+    if(!restored.pendingDeletions) restored.pendingDeletions = [];
+    if(!restored.history) restored.history = [];
+    if(typeof restored.sprintMode !== 'boolean') restored.sprintMode = false;
+    if(typeof restored.extraCopies !== 'number') restored.extraCopies = 0;
+    if(typeof restored.tieBreaker !== 'string') restored.tieBreaker = '';
+    if(typeof restored.doubleDrop !== 'boolean') restored.doubleDrop = false;
+    if(typeof restored.exactAlgo !== 'boolean') restored.exactAlgo = false;
+    if(!restored.collapsedRegions || typeof restored.collapsedRegions !== 'object') restored.collapsedRegions = {};
+    if(!Array.isArray(restored.targets)) restored.targets = [];
+    state = restored;
+    cleanEnabledSites(state);
+    migrateNames();
+    saveState();
+    renderAll();
+    toast('已从快照恢复');
+  } catch(e){
+    toast('恢复失败：' + e.message);
+  }
+}
+function deleteSnapshot(ts){
+  if(!confirm('删除这份快照？')) return;
+  localStorage.removeItem(SNAPSHOT_PREFIX + ts);
+  renderSnapshotList();
+}
+function renderSnapshotList(){
+  const box = document.getElementById('snapshotList');
+  if(!box) return;
+  const list = listSnapshots();
+  if(!list.length){
+    box.innerHTML = '<div class="hint">暂无快照</div>';
+    return;
+  }
+  const pad = n => String(n).padStart(2, '0');
+  box.innerHTML = list.map(s => {
+    const d = new Date(s.ts);
+    const tstr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    const sizeKb = (s.size / 1024).toFixed(1);
+    return `<div class="snapshot-item">
+      <span><span class="snap-time">${tstr}</span><span class="snap-meta">${s.reason} · ${sizeKb}KB</span></span>
+      <span style="display:flex;gap:4px">
+        <button class="small secondary" data-restore-ts="${s.ts}">恢复</button>
+        <button class="small danger" data-delete-ts="${s.ts}">删</button>
+      </span>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('button[data-restore-ts]').forEach(btn => {
+    btn.addEventListener('click', () => restoreSnapshot(parseInt(btn.dataset.restoreTs, 10)));
+  });
+  box.querySelectorAll('button[data-delete-ts]').forEach(btn => {
+    btn.addEventListener('click', () => deleteSnapshot(parseInt(btn.dataset.deleteTs, 10)));
+  });
+}
+
+function estimateStorageSize(){
+  let total = 0;
+  try {
+    for(let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      if(k && k.startsWith(STORAGE_KEY)){
+        total += (k.length + (localStorage.getItem(k) || '').length) * 2;
+      }
+    }
+  } catch(e){}
+  return total;
+}
+function formatBytes(n){
+  if(n < 1024) return n + 'B';
+  if(n < 1024*1024) return (n/1024).toFixed(1) + 'KB';
+  return (n/1024/1024).toFixed(2) + 'MB';
+}
+function copyStateToClipboard(){
+  try {
+    const { weapons, ...rest } = state;
+    const text = JSON.stringify(rest, null, 2);
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    if(ok){
+      localStorage.setItem(STORAGE_KEY + '_last_export', Date.now().toString());
+      toast(`已复制（${formatBytes(text.length*2)}）`);
+      renderSettings();
+      renderProgress();
+    } else {
+      toast('复制失败，请改用导出');
+    }
+  } catch(e){
+    toast('复制失败：' + e.message);
+  }
+}
+
+/* ================= 悬浮卡 ================= */
+const tooltipEl = document.getElementById('hmTooltip');
+function showTooltip(e, html){
+  tooltipEl.innerHTML = html;
+  tooltipEl.style.display = 'block';
+  const rect = tooltipEl.getBoundingClientRect();
+  let x = e.clientX + 12;
+  let y = e.clientY + 12;
+  if(x + rect.width > window.innerWidth) x = e.clientX - rect.width - 12;
+  if(y + rect.height > window.innerHeight) y = e.clientY - rect.height - 12;
+  tooltipEl.style.left = x + 'px';
+  tooltipEl.style.top = y + 'px';
+}
+function hideTooltip(){ tooltipEl.style.display = 'none'; }
+
+function renderHeatmap(){
+  const hm = document.getElementById('heatmap');
+  const skills = state.data.allSkillAttrs;
+  const adds = state.data.allAddAttrs;
+  hm.innerHTML = '';
+  const corner = document.createElement('div');
+  hm.appendChild(corner);
+  skills.forEach(s => {
+    const d = document.createElement('div');
+    d.className = 'hm-col-header';
+    d.textContent = s;
+    hm.appendChild(d);
+  });
+  adds.forEach(add => {
+    const rh = document.createElement('div');
+    rh.className = 'hm-row-header';
+    rh.textContent = toShortAdd(add);
+    rh.title = add;
+    hm.appendChild(rh);
+    skills.forEach(skill => {
+      const cell = document.createElement('div');
+      cell.className = 'hm-cell';
+      const lines = [];
+      let collectedCount = 0;
+      state.data.baseAttrs.forEach(base => {
+        const key = makeKey(base, add, skill);
+        const arr = getCollectedArr(key);
+        const sq = document.createElement('span');
+        sq.className = 'hm-sq ' + bestSqClass(key);
+        cell.appendChild(sq);
+        if(arr.length){
+          collectedCount++;
+          const best = getBestItem(key);
+          const suffix = arr.length > 1 ? ` ×${arr.length}` : '';
+          lines.push(`${base}(${best.baseLv}/${best.addLv}/${best.skillLv})${suffix}`);
+        }
+      });
+      const html = `<b>${toShortAdd(add)} + ${skill}</b>\n` +
+                   `已收集 ${collectedCount}/5\n` +
+                   (lines.length ? lines.join('，') : '<span style="color:var(--dim)">暂无记录</span>');
+      cell.addEventListener('mouseenter', (e) => showTooltip(e, html));
+      cell.addEventListener('mousemove', (e) => showTooltip(e, html));
+      cell.addEventListener('mouseleave', hideTooltip);
+      cell.addEventListener('click', () => {
+        document.querySelector('.tab[data-tab="detail"]').click();
+        document.getElementById('detailFilterAdd').value = add;
+        document.getElementById('detailFilterSkill').value = skill;
+        document.getElementById('detailFilterBase').value = '';
+        renderDetail();
+        setTimeout(() => {
+          const blk = document.querySelector(`#detailContent .skill-block[data-skill="${skill}"]`);
+          if(blk){ blk.scrollIntoView({ behavior:'smooth', block:'start' }); blk.classList.add('highlight'); setTimeout(()=>blk.classList.remove('highlight'), 1200); }
+        }, 50);
+      });
+      hm.appendChild(cell);
+    });
+  });
+}
+
+function renderBaseProgressRow(){
+  const box = document.getElementById('baseProgressRow');
+  box.innerHTML = state.data.baseAttrs.map(base => {
+    let count = 0;
+    Object.keys(state.collected).forEach(k => {
+      if(k.startsWith(base + '|') && getCollectedArr(k).length > 0) count++;
+    });
+    const total = state.data.allAddAttrs.length * state.data.allSkillAttrs.length;
+    return `<span style="background:var(--card2);padding:2px 7px;border-radius:6px;border:1px solid var(--border)">
+      <span style="color:var(--text2)">${base}</span> <b style="color:var(--text)">${count}</b><span style="color:var(--dim)">/${total}</span>
+    </span>`;
+  }).join('');
+}
+
+function findUncovered(){
+  const enabled = getAllSites().filter(s => isSiteEnabled(s.key));
+  const srcMap = buildSourceMap(enabled);
+  const uncovered = [];
+  for(const b of state.data.baseAttrs)
+    for(const a of state.data.allAddAttrs)
+      for(const s of state.data.allSkillAttrs){
+        if(hasCollected(makeKey(b, a, s))) continue;
+        if(getSrc(srcMap, a, s) === 0) uncovered.push({ b, a, s });
+      }
+  return uncovered;
+}
+
+/* ============================================================
+ *  推荐算法
+ * ============================================================ */
+function computeRecommendationRaw(enabled){
+  const baseCombos = combinations(state.data.baseAttrs, 3);
+  const srcMap = buildSourceMap(enabled);
+
+  let totalKeys = 0, filledKeys = 0;
+  for(const b of state.data.baseAttrs)
+    for(const a of state.data.allAddAttrs)
+      for(const s of state.data.allSkillAttrs){
+        totalKeys++;
+        if(hasCollected(makeKey(b, a, s))) filledKeys++;
+      }
+  const progress = filledKeys / Math.max(1, totalKeys);
+  const sprintOn = state.sprintMode || progress > 0.85;
+  const alpha = sprintOn ? 2 : 1;
+  const tieRegion = state.tieBreaker || '';
+  const targets = (state.targets || []).filter(t => t && t.base && t.add && t.skill);
+  const hasTargets = targets.length > 0;
+
+  const invPow = {};
+  for(let s = 1; s <= 12; s++) invPow[s] = 1 / Math.pow(s, alpha);
+
+  const allCandidates = [];
+  let anyTargetHit = false;
+
+  const consider = (cand) => {
+    let targetHits = 0;
+    if(hasTargets){
+      for(const t of targets){
+        if(cand.lockType === 'add'){
+          if(t.add === cand.lockValue
+             && cand.baseCombo.includes(t.base)
+             && cand.site.skills.includes(t.skill)){
+            targetHits++;
+          }
+        } else {
+          if(t.skill === cand.lockValue
+             && cand.baseCombo.includes(t.base)
+             && cand.site.adds.includes(t.add)){
+            targetHits++;
+          }
+        }
+      }
+    }
+    cand.targetHits = targetHits;
+    if(targetHits > 0) anyTargetHit = true;
+    allCandidates.push(cand);
+  };
+
+  for(const site of enabled){
+    for(const add of site.adds){
+      for(const bc of baseCombos){
+        let weighted = 0, blanks = 0;
+        for(const b of bc){
+          for(const s of site.skills){
+            const key = makeKey(b, add, s);
+            if(isKeySaturated(key)) continue;
+            const src = getSrc(srcMap, add, s);
+            if(src === 0) continue;
+            weighted += invPow[src] || 0;
+            blanks++;
+          }
+        }
+        consider({ site, lockType:'add', lockValue:add, baseCombo:bc, weighted, blanks, total: bc.length * site.skills.length });
+      }
+    }
+    for(const skill of site.skills){
+      for(const bc of baseCombos){
+        let weighted = 0, blanks = 0;
+        for(const b of bc){
+          for(const a of site.adds){
+            const key = makeKey(b, a, skill);
+            if(isKeySaturated(key)) continue;
+            const src = getSrc(srcMap, a, skill);
+            if(src === 0) continue;
+            weighted += invPow[src] || 0;
+            blanks++;
+          }
+        }
+        consider({ site, lockType:'skill', lockValue:skill, baseCombo:bc, weighted, blanks, total: bc.length * site.adds.length });
+      }
+    }
+  }
+
+  let best = null;
+  for(const cand of allCandidates){
+    if(!best){ best = cand; continue; }
+    if(hasTargets){
+      if(cand.targetHits > best.targetHits){ best = cand; continue; }
+      if(cand.targetHits < best.targetHits) continue;
+    }
+    if(cand.weighted > best.weighted + 1e-9){ best = cand; continue; }
+    if(cand.weighted < best.weighted - 1e-9) continue;
+    if(cand.blanks > best.blanks){ best = cand; continue; }
+    if(cand.blanks < best.blanks) continue;
+    if(tieRegion && cand.site.region === tieRegion && best.site.region !== tieRegion){
+      best = cand;
+    }
+  }
+  if(!best) return null;
+  return { best, allCandidates, sprintOn, hasTargets, targets, anyTargetHit };
+}
+
+function simulateOutcome(cand){
+  const sim = {};
+  for(const k in state.collected){
+    const v = state.collected[k];
+    sim[k] = Array.isArray(v) ? v.slice() : [v];
+  }
+  const dropCount = state.doubleDrop ? 6 : 3;
+  const makeMaster = () => ({
+    baseLv: 6, addLv: 6, skillLv: 3, cost: 0,
+    iid: 'sim_' + Math.random().toString(36).slice(2,7),
+    time: 0, from: 'sim'
+  });
+
+  const srcMap = buildSourceMap(getAllSites().filter(s => isSiteEnabled(s.key)));
+  const alpha = (state.sprintMode || false) ? 2 : 1;
+  const combos = [];
+  if(cand.lockType === 'add'){
+    for(const b of cand.baseCombo){
+      for(const s of cand.site.skills){
+        const key = makeKey(b, cand.lockValue, s);
+        if(!sim[key]) sim[key] = [];
+        if(sim[key].length < getCapacity(key)){
+          const src = getSrc(srcMap, cand.lockValue, s) || 1;
+          combos.push({ key, weight: 1 / Math.pow(src, alpha) });
+        }
+      }
+    }
+  } else {
+    for(const b of cand.baseCombo){
+      for(const a of cand.site.adds){
+        const key = makeKey(b, a, cand.lockValue);
+        if(!sim[key]) sim[key] = [];
+        if(sim[key].length < getCapacity(key)){
+          const src = getSrc(srcMap, a, cand.lockValue) || 1;
+          combos.push({ key, weight: 1 / Math.pow(src, alpha) });
+        }
+      }
+    }
+  }
+  combos.sort((a, b) => b.weight - a.weight);
+
+  const top = combos.slice(0, dropCount);
+  for(const c of top){
+    sim[c.key].push(makeMaster());
+  }
+
+  return sim;
+}
+
+function computeRecommendation(){
+  const enabled = getAllSites().filter(s => isSiteEnabled(s.key));
+  if(!enabled.length) return null;
+
+  _collectedView = null;
+  const first = computeRecommendationRaw(enabled);
+  if(!first) return null;
+
+  const base = {
+    ...first.best,
+    sprintOn: first.sprintOn,
+    hasTargets: first.hasTargets,
+    targets: first.targets,
+    anyTargetHit: first.anyTargetHit
+  };
+
+  if(!state.exactAlgo) return base;
+
+  const topN = first.allCandidates
+    .filter(c => c.blanks > 0)
+    .sort((a, b) => b.weighted - a.weighted)
+    .slice(0, EXACT_ALGO_TOP_N);
+
+  let bestCand = first.best;
+  let bestScore = first.best.weighted;
+  let secondInfo = null;
+
+  for(const cand of topN){
+    _collectedView = simulateOutcome(cand);
+    const second = computeRecommendationRaw(enabled);
+    _collectedView = null;
+    if(!second) continue;
+    const score = cand.weighted + SECOND_PASS_DISCOUNT * second.best.weighted;
+    if(score > bestScore + 1e-9){
+      bestScore = score;
+      bestCand = cand;
+      secondInfo = second.best;
+    }
+  }
+
+  return {
+    ...base,
+    site: bestCand.site,
+    lockType: bestCand.lockType,
+    lockValue: bestCand.lockValue,
+    baseCombo: bestCand.baseCombo,
+    weighted: bestCand.weighted,
+    blanks: bestCand.blanks,
+    total: bestCand.total,
+    targetHits: bestCand.targetHits,
+    exactAlgo: true,
+    secondPass: secondInfo,
+    combinedScore: bestScore
+  };
+}
+
+function renderRecommend(){
+  const body = document.getElementById('recommendBody');
+  const adoptBtn = document.getElementById('adoptRecBtn');
+  const targetPill = document.getElementById('targetPill');
+  const rec = computeRecommendation();
+  currentRec = rec;
+
+  const activeTargets = (state.targets || []).filter(t => t && t.base && t.add && t.skill);
+  if(targetPill){
+    if(activeTargets.length){
+      targetPill.style.display = 'inline-block';
+      targetPill.textContent = `目标 ${activeTargets.length}`;
+    } else {
+      targetPill.style.display = 'none';
+    }
+  }
+
+  if(!rec){
+    body.innerHTML = '<div class="empty">没有启用的刷取点</div>';
+    adoptBtn.style.display = 'none';
+    return;
+  }
+
+  let targetRows = [];
+  let hitCount = 0;
+  if(rec.hasTargets){
+    for(const t of rec.targets){
+      let hit = false;
+      if(rec.lockType === 'add'){
+        hit = t.add === rec.lockValue
+           && rec.baseCombo.includes(t.base)
+           && rec.site.skills.includes(t.skill);
+      } else {
+        hit = t.skill === rec.lockValue
+           && rec.baseCombo.includes(t.base)
+           && rec.site.adds.includes(t.add);
+      }
+      if(hit) hitCount++;
+      targetRows.push(`<div class="rec-target-row ${hit ? 'hit' : 'miss'}">${hit ? '✓' : '✗'} ${t.base} · ${toShortAdd(t.add)} · ${t.skill}</div>`);
+    }
+  }
+
+  const pct = (rec.blanks / rec.total * 100).toFixed(1);
+  const expUnique = (m, k) => (m * (1 - Math.pow(1 - 1/24, k))).toFixed(2);
+  const exp3 = expUnique(rec.blanks, 3);
+  const exp6 = expUnique(rec.blanks, 6);
+  const lockLabel = rec.lockType === 'add' ? '锁附加' : '锁技能';
+  const lockValDisplay = rec.lockType === 'add' ? toShortAdd(rec.lockValue) : rec.lockValue;
+  const uncovered = findUncovered();
+  const warnHtml = uncovered.length
+    ? `<div class="uncov-warn">⚠ 有 <b>${uncovered.length}</b> 个空白组合当前启用点无法产出（见「缺口清单」）。</div>`
+    : '';
+  const sprintTag = rec.sprintOn ? '<span class="pill warn">冲刺</span>' : '';
+  const exactTag = rec.exactAlgo ? '<span class="pill ok">精确</span>' : '';
+
+  const targetWarn = (rec.hasTargets && !rec.anyTargetHit)
+    ? '<div class="uncov-warn">⚠ 所有候选都产出 <b>0</b> 个目标，已退化为纯全收集推荐。请检查目标或启用更多刷取点。</div>'
+    : '';
+
+  const targetBlock = rec.hasTargets ? `
+    <div class="rec-targets">
+      <div class="rec-targets-title">目标命中 <b>${hitCount}/${rec.targets.length}</b></div>
+      ${targetRows.join('')}
+    </div>
+  ` : '';
+
+  body.innerHTML = `
+    <div class="rec-region">${rec.site.region}</div>
+    <div class="rec-site">${rec.site.name}${sprintTag}${exactTag}</div>
+    <div class="rec-lock-row"><span class="rec-lock-key">${lockLabel}</span><span class="rec-lock-val">${lockValDisplay}</span></div>
+    <div class="rec-lock-row"><span class="rec-lock-key">锁基础</span><span class="rec-lock-val">${rec.baseCombo.join(' · ')}</span></div>
+    ${targetBlock}
+    <div class="rec-stats">
+      空白命中 <b>${pct}%</b>（${rec.blanks}/${rec.total}）<br>
+      加权得分 <b>${rec.weighted.toFixed(2)}</b>${rec.exactAlgo ? ` · 两步综合 <b>${rec.combinedScore.toFixed(2)}</b>` : ''}<br>
+      期望不同空白：普通 <span class="ok">${exp3}</span> · 双倍 <span class="ok">${exp6}</span>
+    </div>
+    ${targetWarn}
+    ${warnHtml}
+  `;
+  adoptBtn.style.display = 'block';
+}
+
+function adoptRecommendation(rec){
+  currentLock = {
+    baseCombo: rec.baseCombo.slice(),
+    siteKey: rec.site.key,
+    lockType: rec.lockType,
+    lockValue: rec.lockValue
+  };
+  renderDropForm();
+  toast('已应用推荐方案，锁定字段不可更改');
+}
+
+function renderPendingDeletions(){
+  const box = document.getElementById('pendingDeletionsBox');
+  if(!state.pendingDeletions.length){
+    box.className = 'empty';
+    box.textContent = '暂无';
+    return;
+  }
+  box.className = 'pending-list';
+  box.innerHTML = state.pendingDeletions.map(item => {
+    const [b, a, s] = item.key.split('|');
+    return `<div class="pending-item">
+      <span class="pname">${b} · ${toShortAdd(a)} · ${s}</span>
+      <span class="plv">${item.baseLv}/${item.addLv}/${item.skillLv}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderProgress(){
+  let count = 0;
+  for(const k in state.collected){
+    if(getCollectedArr(k).length > 0) count++;
+  }
+  const total = totalCombinations();
+  document.getElementById('collectedCount').textContent = count;
+  document.getElementById('totalCount').textContent = total;
+  document.getElementById('progressFill').style.width = (count / total * 100).toFixed(2) + '%';
+  document.getElementById('progressPill').textContent = `${count} / ${total}`;
+
+  const etaEl = document.getElementById('etaHint');
+  if(etaEl){
+    let weekNew = 0;
+    const now = Date.now();
+    const sevenDaysAgo = now - 7 * 86400000;
+    state.history.forEach(h => {
+      if(h.time >= sevenDaysAgo){
+        weekNew += (h.results || []).filter(r => r.status === 'new').length;
+      }
+    });
+    if(weekNew > 0){
+      const remain = total - count;
+      const days = Math.ceil(remain / (weekNew / 7));
+      etaEl.innerHTML = `按最近 7 天速度（日均 ${ (weekNew/7).toFixed(1) } 个），还需约 <b>${days}</b> 天毕业。`;
+    } else {
+      etaEl.textContent = '暂无近期刷取记录，无法预估毕业时间。';
+    }
+  }
+
+  const warnEl = document.getElementById('backupWarn');
+  if(warnEl){
+    const last = parseInt(localStorage.getItem(STORAGE_KEY + '_last_export') || '0', 10);
+    const days = last ? Math.floor((Date.now() - last) / 86400000) : Infinity;
+    if(days >= EXPORT_REMIND_DAYS){
+      warnEl.style.display = 'block';
+      warnEl.innerHTML = last
+        ? `⚠ 已 ${days} 天未导出备份，建议去「设置」里一键复制或导出 JSON。`
+        : '⚠ 尚未导出过备份，建议去「设置」里一键复制或导出 JSON。';
+    } else {
+      warnEl.style.display = 'none';
+    }
+  }
+}
+
+function initDetailFilters(){
+  const fb = document.getElementById('detailFilterBase');
+  const fa = document.getElementById('detailFilterAdd');
+  const fs = document.getElementById('detailFilterSkill');
+  fb.innerHTML = '<option value="">全部</option>' + state.data.baseAttrs.map(a => `<option>${a}</option>`).join('');
+  fa.innerHTML = '<option value="">全部</option>' + state.data.allAddAttrs.map(a => `<option>${a}</option>`).join('');
+  fs.innerHTML = '<option value="">全部</option>' + state.data.allSkillAttrs.map(a => `<option>${a}</option>`).join('');
+}
+
+function renderDetail(){
+  const fb = document.getElementById('detailFilterBase').value;
+  const fa = document.getElementById('detailFilterAdd').value;
+  const fs = document.getElementById('detailFilterSkill').value;
+  const bases = state.data.baseAttrs;
+  const adds  = state.data.allAddAttrs;
+  const skills = state.data.allSkillAttrs;
+
+  let total = 0;
+  Object.entries(state.collected).forEach(([key]) => {
+    const [b, a, s] = key.split('|');
+    if(fb && fb !== b) return;
+    if(fa && fa !== a) return;
+    if(fs && fs !== s) return;
+    total++;
+  });
+  document.getElementById('detailStats').textContent = `共 ${total} 条`;
+
+  const content = document.getElementById('detailContent');
+  if(total === 0){
+    content.innerHTML = '<div class="card empty">没有符合条件的已收集基质</div>';
+    return;
+  }
+  const blocks = [];
+  skills.forEach(skill => {
+    if(fs && fs !== skill) return;
+    let blockCount = 0;
+    const rows = adds.map(add => {
+      if(fa && fa !== add){ return { add, cells: bases.map(() => null), dim: true }; }
+      const cells = bases.map(b => {
+        if(fb && fb !== b){
+          const key = makeKey(b, add, skill);
+          const arr = getCollectedArr(key);
+          return { key, arr, dim: true };
+        }
+        const key = makeKey(b, add, skill);
+        const arr = getCollectedArr(key);
+        if(arr.length) blockCount++;
+        return { key, arr, dim: false };
+      });
+      return { add, cells, dim: false };
+    });
+    if(blockCount === 0 && !fs) return;
+
+    let thead = '<tr><th class="row-head"></th>' +
+      bases.map(b => {
+        const dim = (fb && fb !== b) ? ' dimmed' : '';
+        return `<th class="${dim}">${b}</th>`;
+      }).join('') + '</tr>';
+    let tbody = '';
+    rows.forEach(({add, cells, dim}) => {
+      const rowDim = dim || (fa && fa !== add);
+      let tds = '';
+      cells.forEach((cell, idx) => {
+        const baseDim = (fb && fb !== bases[idx]);
+        const cls = [];
+        if(rowDim || baseDim) cls.push('dimmed');
+        if(!cell || !cell.arr.length){
+          cls.push('empty');
+          tds += `<td class="${cls.join(' ')}">·</td>`;
+        } else {
+          const best = cell.arr.reduce((bi, x) => x.cost < bi.cost ? x : bi, cell.arr[0]);
+          const lvCode = `${best.baseLv}${best.addLv}${best.skillLv}`;
+          const multi = cell.arr.length > 1 ? `<span class="copy-badge">×${cell.arr.length}</span>` : '';
+          if(!cell.dim && !rowDim){
+            cls.push('filled');
+            if(best.cost <= 0) cls.push('master');
+            tds += `<td class="${cls.join(' ')}" data-edit-key="${cell.key}" title="点击修改 · ${best.baseLv}/${best.addLv}/${best.skillLv}${cell.arr.length > 1 ? ' · 共 ' + cell.arr.length + ' 份' : ''}">${lvCode}${multi}</td>`;
+          } else {
+            tds += `<td class="${cls.join(' ')}">${lvCode}${multi}</td>`;
+          }
+        }
+      });
+      tbody += `<tr><th class="row-head" title="${add}">${toShortAdd(add)}</th>${tds}</tr>`;
+    });
+
+    blocks.push(`
+      <div class="skill-block" data-skill="${skill}">
+        <div class="skill-block-header">
+          <div class="skill-block-name">${skill}</div>
+          <div class="skill-block-stats">已收集 <b>${blockCount}</b> / ${12*5}</div>
+        </div>
+        <table class="matrix-table">
+          <thead>${thead}</thead>
+          <tbody>${tbody}</tbody>
+        </table>
+        <div class="matrix-footer">
+          <span>行：附加属性 · 列：基础属性</span>
+          <span>格内三位数 = 基础 / 附加 / 技能等级 · 点击可修改</span>
+        </div>
+      </div>
+    `);
+  });
+  content.innerHTML = blocks.join('') || '<div class="card empty">没有符合条件的已收集基质</div>';
+
+  content.querySelectorAll('td[data-edit-key]').forEach(td => {
+    td.addEventListener('click', () => openEditModal(td.dataset.editKey));
+  });
+}
+
+function buildLevelOptions(cfg){
+  let html = '';
+  for(let l = 1; l <= cfg.max; l++) html += `<option value="${l}">${l} 级</option>`;
+  return html;
+}
+function refreshEditCostPreview(){
+  const b = parseInt(document.getElementById('editBaseLv').value, 10);
+  const a = parseInt(document.getElementById('editAddLv').value, 10);
+  const s = parseInt(document.getElementById('editSkillLv').value, 10);
+  const cost = totalCost(b, a, s);
+  const code = `${b}${a}${s}`;
+  document.getElementById('editCostPreview').innerHTML =
+    `等级码 <b style="color:var(--text)">${code}</b> · 剩余冷却脂 <b>${cost}</b>`;
+}
+
+function openEditModal(key){
+  const arr = getCollectedArr(key);
+  if(!arr.length) return;
+  currentEditKey = key;
+  let bestIdx = 0;
+  for(let i = 1; i < arr.length; i++) if(arr[i].cost < arr[bestIdx].cost) bestIdx = i;
+  currentEditIndex = bestIdx;
+  const item = arr[bestIdx];
+  const [b, a, s] = key.split('|');
+  const totalNote = arr.length > 1 ? `（共 ${arr.length} 份，编辑最优份）` : '';
+  document.getElementById('editModalKey').textContent = `${b} · ${toShortAdd(a)} · ${s} ${totalNote}`;
+  const cfg = state.data.levelConfig;
+  const baseSel = document.getElementById('editBaseLv');
+  const addSel = document.getElementById('editAddLv');
+  const skillSel = document.getElementById('editSkillLv');
+  baseSel.innerHTML = buildLevelOptions(cfg.base);
+  addSel.innerHTML = buildLevelOptions(cfg.add);
+  skillSel.innerHTML = buildLevelOptions(cfg.skill);
+  baseSel.value = item.baseLv;
+  addSel.value = item.addLv;
+  skillSel.value = item.skillLv;
+  refreshEditCostPreview();
+  document.getElementById('editModal').classList.add('show');
+}
+function closeEditModal(){
+  currentEditKey = null;
+  currentEditIndex = 0;
+  document.getElementById('editModal').classList.remove('show');
+}
+
+let _targetsDraft = [];
+function openTargetsModal(){
+  _targetsDraft = (state.targets || []).map(t => ({ ...t }));
+  if(_targetsDraft.length === 0) _targetsDraft.push({ base:'', add:'', skill:'' });
+  renderTargetsList();
+  document.getElementById('targetsModal').classList.add('show');
+}
+function closeTargetsModal(){
+  _targetsDraft = [];
+  document.getElementById('targetsModal').classList.remove('show');
+}
+function renderTargetsList(){
+  const box = document.getElementById('targetsList');
+  box.innerHTML = _targetsDraft.map((t, i) => `
+    <div class="target-row" data-idx="${i}">
+      <select data-field="base">
+        <option value="">基础</option>
+        ${state.data.baseAttrs.map(b => `<option value="${b}" ${b === t.base ? 'selected' : ''}>${b}</option>`).join('')}
+      </select>
+      <select data-field="add">
+        <option value="">附加</option>
+        ${state.data.allAddAttrs.map(a => `<option value="${a}" ${a === t.add ? 'selected' : ''}>${toShortAdd(a)}</option>`).join('')}
+      </select>
+      <select data-field="skill">
+        <option value="">技能</option>
+        ${state.data.allSkillAttrs.map(s => `<option value="${s}" ${s === t.skill ? 'selected' : ''}>${s}</option>`).join('')}
+      </select>
+      <button class="small danger" data-remove="${i}" ${_targetsDraft.length <= 1 ? 'disabled style="opacity:.4;cursor:not-allowed"' : ''}>×</button>
+    </div>
+  `).join('');
+
+  box.querySelectorAll('select').forEach(sel => {
+    sel.addEventListener('change', e => {
+      const row = e.target.closest('.target-row');
+      const idx = parseInt(row.dataset.idx, 10);
+      const field = e.target.dataset.field;
+      _targetsDraft[idx][field] = e.target.value;
+    });
+  });
+  box.querySelectorAll('button[data-remove]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const idx = parseInt(e.target.dataset.remove, 10);
+      if(_targetsDraft.length <= 1) return;
+      _targetsDraft.splice(idx, 1);
+      renderTargetsList();
+    });
+  });
+}
+function saveTargets(){
+  const valid = _targetsDraft
+    .filter(t => t.base && t.add && t.skill)
+    .map(t => ({ base: toFullBase(t.base), add: toFullAdd(t.add), skill: toFullSkill(t.skill) }));
+  state.targets = valid;
+  saveState();
+  closeTargetsModal();
+  renderRecommend();
+  renderWeapons();
+  toast(valid.length ? `已设置 ${valid.length} 个目标` : '已清空目标');
+}
+function saveEditModal(){
+  if(!currentEditKey) return;
+  const arr = getCollectedArr(currentEditKey);
+  if(!arr.length || currentEditIndex >= arr.length){ closeEditModal(); return; }
+  const baseLv = parseInt(document.getElementById('editBaseLv').value, 10);
+  const addLv = parseInt(document.getElementById('editAddLv').value, 10);
+  const skillLv = parseInt(document.getElementById('editSkillLv').value, 10);
+  const cost = totalCost(baseLv, addLv, skillLv);
+  const inst = arr[currentEditIndex];
+  inst.baseLv = baseLv; inst.addLv = addLv; inst.skillLv = skillLv;
+  inst.cost = cost; inst.time = Date.now(); inst.from = '手动修改';
+  setCollectedArr(currentEditKey, arr);
+  saveState();
+  closeEditModal();
+  renderHeatmap(); renderBaseProgressRow(); renderProgress();
+  renderRecommend(); renderDetail(); renderHistory(); renderGaps(); renderWeapons();
+  toast('已更新强化等级');
+}
+function deleteEditKey(){
+  if(!currentEditKey) return;
+  const arr = getCollectedArr(currentEditKey);
+  if(!arr.length) { closeEditModal(); return; }
+  const msg = arr.length > 1
+    ? `删除该组合的最优份（共 ${arr.length} 份，删除后剩 ${arr.length - 1} 份）？`
+    : `从已收集记录中删除此基质？该操作不可恢复。`;
+  if(!confirm(msg)) return;
+  arr.splice(currentEditIndex, 1);
+  setCollectedArr(currentEditKey, arr);
+  saveState(); closeEditModal();
+  renderHeatmap(); renderBaseProgressRow(); renderProgress();
+  renderRecommend(); renderDetail(); renderHistory(); renderGaps(); renderWeapons();
+  toast('已删除记录');
+}
+
+function initGapFilters(){
+  const gb = document.getElementById('gapFilterBase');
+  const ga = document.getElementById('gapFilterAdd');
+  const gs = document.getElementById('gapFilterSkill');
+  gb.innerHTML = '<option value="">全部</option>' + state.data.baseAttrs.map(a => `<option>${a}</option>`).join('');
+  ga.innerHTML = '<option value="">全部</option>' + state.data.allAddAttrs.map(a => `<option>${a}</option>`).join('');
+  gs.innerHTML = '<option value="">全部</option>' + state.data.allSkillAttrs.map(a => `<option>${a}</option>`).join('');
+}
+
+function renderGaps(){
+  const enabled = getAllSites().filter(s => isSiteEnabled(s.key));
+  const srcMap = buildSourceMap(enabled);
+  const gb = document.getElementById('gapFilterBase').value;
+  const ga = document.getElementById('gapFilterAdd').value;
+  const gs = document.getElementById('gapFilterSkill').value;
+  const gsrc = document.getElementById('gapFilterSource').value ? parseInt(document.getElementById('gapFilterSource').value, 10) : 0;
+
+  const list = [];
+  let uncoveredCount = 0;
+  for(const b of state.data.baseAttrs)
+    for(const a of state.data.allAddAttrs)
+      for(const s of state.data.allSkillAttrs){
+        const key = makeKey(b, a, s);
+        if(isKeySaturated(key)) continue;
+        const src = getSrc(srcMap, a, s);
+        if(src === 0){ uncoveredCount++; continue; }
+        if(gb && gb !== b) continue;
+        if(ga && ga !== a) continue;
+        if(gs && gs !== s) continue;
+        if(gsrc && src > gsrc) continue;
+        const arr = getCollectedArr(key);
+        list.push({ b, a, s, src, sites: getSites(srcMap, a, s), have: arr.length, need: getCapacity(key) });
+      }
+
+  list.sort((x, y) => x.src - y.src || x.b.localeCompare(y.b) || x.a.localeCompare(y.a) || x.s.localeCompare(y.s));
+  _lastGapList = list;
+
+  const pill = document.getElementById('gapPill');
+  if(pill) pill.textContent = list.length;
+  const hint = document.getElementById('gapUncoveredHint');
+  if(hint){
+    hint.innerHTML = uncoveredCount
+      ? `<span style="color:var(--bad)">当前启用刷取点无法产出的空白组合：<b>${uncoveredCount}</b> 个。请在设置中启用能覆盖它们的刷取点。</span>`
+      : '';
+  }
+  const box = document.getElementById('gapList');
+  if(!list.length){
+    box.innerHTML = '<div class="card empty">没有符合条件的缺口</div>';
+    return;
+  }
+  box.innerHTML = list.map(g => {
+    const slotText = g.have > 0 ? `<span style="color:var(--warn);font-size:10px;margin-right:6px">已 ${g.have}/${g.need} 份</span>` : '';
+    return `
+    <div class="gap-item">
+      ${slotText}
+      <span class="gap-name" title="${g.b} · ${g.a} · ${g.s}">${g.b} · ${toShortAdd(g.a)} · ${g.s}</span>
+      <span class="gap-sites" title="${g.sites.join('、')}">${g.sites.join('、')}</span>
+      <span class="gap-src ${srcClass(g.src)}">来源 ${g.src}</span>
+    </div>`;
+  }).join('');
+}
+
+function copyGapList(){
+  if(!_lastGapList.length){ toast('当前列表为空'); return; }
+  const text = _lastGapList.map(g => {
+    const slot = g.have > 0 ? `[已 ${g.have}/${g.need} 份] ` : '';
+    return `${slot}${g.b} · ${g.a} · ${g.s}　来源 ${g.src}：${g.sites.join('、')}`;
+  }).join('\n');
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); toast(`已复制 ${_lastGapList.length} 条`); }
+  catch(e){ toast('复制失败'); }
+  document.body.removeChild(ta);
+}
+
+/* ============================================================
+ *  武器图鉴
+ * ============================================================ */
+function isWeaponComplete(w){
+  const key = makeKey(w.base, w.add, w.skill);
+  const arr = getCollectedArr(key);
+  return arr.some(x => x.cost <= 0);
+}
+function renderWeaponSlots(key, demand){
+  const arr = getCollectedArr(key);
+  const sorted = arr.slice().sort((a, b) => {
+    if(a.cost <= 0 && b.cost > 0) return -1;
+    if(a.cost > 0 && b.cost <= 0) return 1;
+    return a.cost - b.cost;
+  });
+  let slots = '';
+  for(let i = 0; i < demand; i++){
+    const item = sorted[i];
+    let cls = 'weapon-slot';
+    if(item){ cls += item.cost <= 0 ? ' master' : ' partial'; }
+    slots += `<span class="${cls}"></span>`;
+  }
+  const have = arr.length;
+  const cls = have >= demand ? 'ok' : (have > 0 ? 'partial' : 'none');
+  return `<span class="weapon-slots">${slots}<span class="weapon-slot-count ${cls}">${have}/${demand} 份</span></span>`;
+}
+function isWeaponTargeted(w){
+  const k = makeKey(w.base, w.add, w.skill);
+  return (state.targets || []).some(t => makeKey(t.base, t.add, t.skill) === k);
+}
+function toggleWeaponTarget(weaponId){
+  const w = state.weapons.find(x => x.id === weaponId);
+  if(!w) return;
+  if(!Array.isArray(state.targets)) state.targets = [];
+  const k = makeKey(w.base, w.add, w.skill);
+  const idx = state.targets.findIndex(t => makeKey(t.base, t.add, t.skill) === k);
+  if(idx >= 0){
+    state.targets.splice(idx, 1);
+    toast(`已移除目标：${w.name}`);
+  } else {
+    if(state.targets.length >= 3){ toast('最多 3 个目标，请先在「⚙ 目标」里移除一个'); return; }
+    state.targets.push({
+      base: toFullBase(w.base),
+      add: toFullAdd(w.add),
+      skill: toFullSkill(w.skill)
+    });
+    toast(`已设为目标：${w.name}`);
+  }
+  saveState();
+  renderWeapons();
+  renderRecommend();
+}
+
+function renderWeapons(){
+  const grid = document.getElementById('weaponGrid');
+  if(!grid) return;
+  const weapons = state.weapons || [];
+
+  let completeCount = 0;
+  weapons.forEach(w => { if(isWeaponComplete(w)) completeCount++; });
+  document.getElementById('weaponCountPill').textContent = weapons.length;
+  document.getElementById('weaponTotal').textContent = weapons.length;
+  document.getElementById('weaponComplete').textContent = completeCount;
+
+  const ft = document.getElementById('weaponFilterType');
+  if(ft && ft.options.length <= 1){
+    const types = [...new Set(weapons.map(w => w.type).filter(Boolean))];
+    types.forEach(t => {
+      const o = document.createElement('option');
+      o.value = t; o.textContent = t;
+      ft.appendChild(o);
+    });
+  }
+
+  const fType = ft ? ft.value : '';
+  const fCat = document.getElementById('weaponFilterCategory').value;
+  const fStatus = document.getElementById('weaponFilterStatus').value;
+
+  let list = weapons.slice();
+  if(fType) list = list.filter(w => w.type === fType);
+  if(fCat === 'other') list = list.filter(w => !w.category);
+  else if(fCat) list = list.filter(w => w.category === fCat);
+  if(fStatus === 'complete') list = list.filter(isWeaponComplete);
+  else if(fStatus === 'incomplete') list = list.filter(w => !isWeaponComplete(w));
+
+  if(!list.length){
+    grid.innerHTML = '<div class="card empty" style="grid-column:1/-1">没有符合条件的武器</div>';
+    return;
+  }
+
+  const weaponMap = {};
+  weapons.forEach(w => {
+    const k = makeKey(w.base, w.add, w.skill);
+    if(!weaponMap[k]) weaponMap[k] = [];
+    weaponMap[k].push(w);
+  });
+  const demandMap = buildWeaponDemandMap();
+
+  grid.innerHTML = list.map(w => {
+    const key = makeKey(w.base, w.add, w.skill);
+    const arr = getCollectedArr(key);
+    const best = arr.length ? arr.reduce((bi, x) => x.cost < bi.cost ? x : bi, arr[0]) : null;
+    const isDone = isWeaponComplete(w);
+    const isPartial = !isDone && arr.length > 0;
+    const lv = best ? `${best.baseLv}/${best.addLv}/${best.skillLv}` : '';
+    const statusCls = isDone ? 'ok' : (isPartial ? 'partial' : 'no');
+    const statusTxt = isDone ? '✓' : (isPartial ? '◐' : '✗');
+    const cardCls = isDone ? 'is-complete' : (isPartial ? 'is-partial' : '');
+    const catHtml = w.category
+      ? `<span class="weapon-category ${w.category === '专武' ? 'cat-special' : 'cat-battlepass'}">${w.category}</span>`
+      : '';
+    const ownerHtml = w.owner
+      ? `<div class="weapon-owner">对应干员：<b>${w.owner}</b></div>`
+      : '';
+    const sharedWeapons = (weaponMap[key] || []).filter(x => x.id !== w.id);
+    const sharedHtml = sharedWeapons.length
+      ? `<div class="weapon-shared">共用该基质：<b>${sharedWeapons.map(x => x.name).join('、')}</b></div>`
+      : '';
+    const demand = demandMap[key] || 1;
+    const countHtml = demand > 1 ? renderWeaponSlots(key, demand) : '';
+    const targeted = isWeaponTargeted(w);
+
+    return `<div class="weapon-card ${cardCls}">
+      <div class="weapon-card-head">
+        <span class="weapon-name">${w.name}</span>
+        ${w.type ? `<span class="weapon-type">${w.type}</span>` : ''}
+        ${catHtml}
+      </div>
+      ${ownerHtml}
+      ${sharedHtml}
+      <div class="weapon-need">
+        <div class="need-row">
+          <span class="need-status ${statusCls}">${statusTxt}</span>
+          <span class="need-key">${w.base} · ${toShortAdd(w.add)} · ${w.skill}</span>
+          <span class="need-lv ${isPartial ? 'partial' : ''}">${lv}</span>
+          ${countHtml}
+        </div>
+        ${isDone ? '' : `
+        <div class="need-actions">
+          <button class="weapon-target-btn ${targeted ? 'active' : ''}" data-target-weapon="${w.id}">
+            ${targeted ? '✓ 已设为目标' : '+ 设为目标'}
+          </button>
+        </div>`}
+      </div>
+    </div>`;
+  }).join('');
+
+  grid.querySelectorAll('button[data-target-weapon]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      toggleWeaponTarget(btn.dataset.targetWeapon);
+    });
+  });
+}
+
+function renderSevenDayChart(){
+  const el = document.getElementById('sevenDayChart');
+  if(!el) return;
+  const days = [];
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  for(let i = 6; i >= 0; i--){
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    days.push({
+      start: d.getTime(), end: d.getTime() + 86400000,
+      label: `${d.getMonth()+1}/${d.getDate()}`, count: 0
+    });
+  }
+  for(const h of state.history){
+    for(const d of days){
+      if(h.time >= d.start && h.time < d.end){
+        d.count += (h.results || []).filter(r => r.status === 'new').length;
+        break;
+      }
+    }
+  }
+  const max = Math.max(1, ...days.map(d => d.count));
+  el.innerHTML = days.map(d => {
+    const hpx = d.count === 0 ? 2 : Math.max(4, d.count / max * 60);
+    return `<div class="day">
+      <span class="cnt">${d.count || ''}</span>
+      <div class="bar" style="height:${hpx}px"></div>
+      <span class="lbl">${d.label}</span>
+    </div>`;
+  }).join('');
+}
+
+function getFilteredHistory(){
+  const filter = document.getElementById('historyFilter').value;
+  let list = state.history || [];
+  if(filter === 'hasNew') list = list.filter(h => (h.results || []).some(r => r.status === 'new'));
+  else if(filter === 'onlyDup') list = list.filter(h => !(h.results || []).some(r => r.status === 'new'));
+  return list;
+}
+
+function renderHistory(){
+  const box = document.getElementById('historyContent');
+  const list = getFilteredHistory();
+
+  const pill = document.getElementById('historyPill');
+  if(pill) pill.textContent = (state.history || []).length + ' 条';
+
+  if(!list.length){
+    box.innerHTML = '<div class="card empty">暂无刷取记录</div>';
+    renderHistoryLoadMore();
+    return;
+  }
+
+  const total = list.length;
+  const shown = list.slice(0, _historyPage * HISTORY_PAGE_SIZE);
+
+  const pad = n => String(n).padStart(2, '0');
+  box.innerHTML = shown.map((h) => {
+    const origIdx = state.history.indexOf(h);
+    const t = new Date(h.time || Date.now());
+    const tstr = `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())} ${pad(t.getHours())}:${pad(t.getMinutes())}`;
+    const results = h.results || [];
+    let newN = 0, repN = 0, skipN = 0;
+    results.forEach(r => {
+      if(r.status === 'new') newN++;
+      else if(r.keep) repN++;
+      else skipN++;
+    });
+    let entries = [];
+    if(h.items && h.items.length){
+      entries = h.items.map((it, i) => ({
+        name: `${it.base} · ${toShortAdd(it.add)} · ${it.skill}`,
+        lv: `${it.baseLv}/${it.addLv}/${it.skillLv}`,
+        cost: totalCost(it.baseLv, it.addLv, it.skillLv),
+        r: results[i] || {}
+      }));
+    } else {
+      entries = results.map(r => {
+        const p = String(r.key || '').split('|');
+        const name = p.length === 3 ? `${p[0]} · ${toShortAdd(p[1])} · ${p[2]}` : p.join(' · ');
+        return { name, lv: '—', cost: (typeof r.cost === 'number' ? r.cost : null), r };
+      });
+    }
+    const rows = entries.map(e => {
+      let txt = '已记录', cls = 'st-new', skipCls = '';
+      if(e.r.status === 'new'){ txt = '新 · 保留'; cls = 'st-new'; }
+      else if(e.r.status === 'dup' && e.r.keep){ txt = '替换 · 旧入暂存'; cls = 'st-rep'; }
+      else if(e.r.status === 'dup'){ txt = '重复 · 丢弃'; cls = 'st-skip'; skipCls = ' is-skip'; }
+      const costTxt = (e.cost === null || e.cost === undefined) ? '—' : e.cost;
+      return `<div class="history-row${skipCls}">
+        <span class="h-name" title="${e.name}">${e.name}</span>
+        <span class="h-lv">${e.lv}</span>
+        <span class="h-val">剩余 ${costTxt}</span>
+        <span class="h-status ${cls}">${txt}</span>
+      </div>`;
+    }).join('');
+    return `<div class="history-item">
+      <div class="history-head">
+        <span class="history-time">${tstr}</span>
+        <span class="history-sum">
+          <span class="pill">${h.site || '手动录入'}</span>
+          <span class="pill ok">新 ${newN}</span>
+          <span class="pill">替换 ${repN}</span>
+          <span class="pill">丢弃 ${skipN}</span>
+          <button class="small danger" data-undo="${origIdx}">撤销</button>
+        </span>
+      </div>
+      ${rows || '<div class="empty" style="padding:4px">无明细</div>'}
+    </div>`;
+  }).join('');
+
+  box.querySelectorAll('button[data-undo]').forEach(btn => {
+    btn.addEventListener('click', () => undoHistory(parseInt(btn.dataset.undo, 10)));
+  });
+
+  renderHistoryLoadMore(total, shown.length);
+}
+
+function renderHistoryLoadMore(total, shown){
+  const wrap = document.getElementById('historyLoadMoreWrap');
+  if(!wrap) return;
+  if(total === undefined){
+    wrap.innerHTML = '';
+    return;
+  }
+  if(shown >= total){
+    wrap.innerHTML = `<div class="hint" style="font-size:10.5px">已显示全部 ${total} 条</div>`;
+    return;
+  }
+  const remain = total - shown;
+  wrap.innerHTML = `<button id="historyLoadMoreBtn" class="secondary">加载更多（还有 ${remain} 条）</button>`;
+  const btn = document.getElementById('historyLoadMoreBtn');
+  if(btn){
+    btn.addEventListener('click', () => {
+      _historyPage++;
+      renderHistory();
+    });
+  }
+}
+
+function exportHistory(){
+  const history = state.history || [];
+  if(!history.length){ toast('暂无历史记录'); return; }
+  const payload = {
+    exportedAt: Date.now(),
+    exportedAtReadable: new Date().toISOString(),
+    count: history.length,
+    version: 1,
+    history
+  };
+  const filename = `zmd-history-${new Date().toISOString().slice(0,10)}.json`;
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+  toast(`已导出 ${history.length} 条历史记录`);
+}
+
+function undoHistory(origIdx){
+  if(origIdx < 0 || origIdx >= state.history.length) return;
+  const h = state.history[origIdx];
+  if(!h) return;
+  if(!confirm('撤销这次提交？将恢复被替换的基质、删除新增的基质。')) return;
+  const results = h.results || [];
+  for(const r of results){
+    const arr = getCollectedArr(r.key);
+    if(r.status === 'new'){
+      const i = arr.findIndex(x => x.iid === r.iid);
+      if(i >= 0) arr.splice(i, 1);
+      setCollectedArr(r.key, arr);
+    } else if(r.status === 'dup' && r.keep){
+      const idx = state.pendingDeletions.findIndex(p => p.key === r.key && p.time === h.time);
+      if(idx >= 0){
+        const old = state.pendingDeletions.splice(idx, 1)[0];
+        const i = arr.findIndex(x => x.iid === r.iid);
+        if(i >= 0){
+          arr[i] = { iid: newIid(), baseLv: old.baseLv, addLv: old.addLv, skillLv: old.skillLv, cost: old.cost, time: old.time, from: '撤销恢复' };
+        } else {
+          arr.push({ iid: newIid(), baseLv: old.baseLv, addLv: old.addLv, skillLv: old.skillLv, cost: old.cost, time: old.time, from: '撤销恢复' });
+        }
+        setCollectedArr(r.key, arr);
+      }
+    }
+  }
+  state.history.splice(origIdx, 1);
+  saveState(); renderAll(); toast('已撤销');
+}
+
+function renderDropForm(){
+  const count = parseInt(document.getElementById('dropCount').value, 10);
+  const box = document.getElementById('dropForm');
+  box.innerHTML = '';
+  const lv = state.data.dropLevels;
+  let baseOptions = state.data.baseAttrs;
+  let addOptions = state.data.allAddAttrs;
+  let skillOptions = state.data.allSkillAttrs;
+  let lockedAdd = false, lockedSkill = false, lockValue = null, site = null;
+
+  if(currentLock){
+    baseOptions = currentLock.baseCombo;
+    site = getAllSites().find(s => s.key === currentLock.siteKey);
+    if(site){ addOptions = site.adds; skillOptions = site.skills; }
+    lockValue = currentLock.lockValue;
+    if(currentLock.lockType === 'add') lockedAdd = true;
+    else lockedSkill = true;
+  }
+
+  for(let i = 0; i < count; i++){
+    const div = document.createElement('div');
+    div.className = 'matrix-item';
+    div.id = `drop-item-${i}`;
+    div.innerHTML = `
+      <div class="matrix-title"><span>基质 ${i+1}</span><span class="result-label"></span></div>
+      <div class="matrix-line">
+        <select data-idx="${i}" data-field="base">${baseOptions.map(a=>`<option value="${a}">${a}</option>`).join('')}</select>
+        <select data-idx="${i}" data-field="baseLv">${lv.base.map(l=>`<option value="${l}">${l}</option>`).join('')}</select>
+      </div>
+      <div class="matrix-line">
+        <select data-idx="${i}" data-field="add" ${lockedAdd?'disabled':''}>${addOptions.map(a=>`<option value="${a}">${toShortAdd(a)}</option>`).join('')}</select>
+        <select data-idx="${i}" data-field="addLv">${lv.add.map(l=>`<option value="${l}">${l}</option>`).join('')}</select>
+      </div>
+      <div class="matrix-line">
+        <select data-idx="${i}" data-field="skill" ${lockedSkill?'disabled':''}>${skillOptions.map(a=>`<option value="${a}">${a}</option>`).join('')}</select>
+        <select data-idx="${i}" data-field="skillLv">${lv.skill.map(l=>`<option value="${l}">${l}</option>`).join('')}</select>
+      </div>
+    `;
+    box.appendChild(div);
+    if(lockedAdd && lockValue){
+      const s = div.querySelector('select[data-field="add"]');
+      if(s) s.value = lockValue;
+    }
+    if(lockedSkill && lockValue){
+      const s = div.querySelector('select[data-field="skill"]');
+      if(s) s.value = lockValue;
+    }
+  }
+
+  const lockPill = document.getElementById('lockPill');
+  if(lockPill){
+    if(currentLock){
+      lockPill.style.display = 'inline-block';
+      const lockLabel = currentLock.lockType === 'add' ? '附加' : '技能';
+      const lockValDisplay = currentLock.lockType === 'add' ? toShortAdd(currentLock.lockValue) : currentLock.lockValue;
+      lockPill.textContent = `已采纳 · ${site ? site.name : ''} · 锁${lockLabel} ${lockValDisplay}`;
+    } else {
+      lockPill.style.display = 'none';
+      lockPill.textContent = '';
+    }
+  }
+}
+
+function getDropItems(){
+  const count = parseInt(document.getElementById('dropCount').value, 10);
+  const items = [];
+  for(let i = 0; i < count; i++){
+    const get = f => {
+      const el = document.querySelector(`#dropForm select[data-idx="${i}"][data-field="${f}"]`);
+      return el ? el.value : '';
+    };
+    items.push({
+      base: get('base'), baseLv: parseInt(get('baseLv'), 10),
+      add: get('add'), addLv: parseInt(get('addLv'), 10),
+      skill: get('skill'), skillLv: parseInt(get('skillLv'), 10)
+    });
+  }
+  return items;
+}
+
+function handleSubmitDrop(){
+  const items = getDropItems();
+  const results = [];
+  const now = Date.now();
+  items.forEach((item, idx) => {
+    const key = makeKey(item.base, item.add, item.skill);
+    const cost = totalCost(item.baseLv, item.addLv, item.skillLv);
+    const arr = getCollectedArr(key);
+    const cap = getCapacity(key);
+    const box = document.getElementById(`drop-item-${idx}`);
+    if(box) box.classList.remove('is-new','is-replace','is-skip');
+
+    const newInst = { iid: newIid(), baseLv: item.baseLv, addLv: item.addLv, skillLv: item.skillLv, cost, time: now, from: '手动录入' };
+
+    if(arr.length < cap){
+      arr.push(newInst);
+      setCollectedArr(key, arr);
+      results.push({ key, status:'new', keep:true, cost, idx, iid: newInst.iid });
+      if(box){
+        box.classList.add('is-new');
+        const l = box.querySelector('.result-label');
+        if(l) l.textContent = cap > 1 ? `新 · 第 ${arr.length}/${cap} 份` : '新 · 保留';
+      }
+    } else {
+      const worstIdx = getWorstIndex(arr);
+      const worst = arr[worstIdx];
+      if(cost < worst.cost){
+        state.pendingDeletions.push({ key, baseLv: worst.baseLv, addLv: worst.addLv, skillLv: worst.skillLv, cost: worst.cost, time: now, iid: worst.iid });
+        arr[worstIdx] = newInst;
+        setCollectedArr(key, arr);
+        results.push({ key, status:'dup', keep:true, cost, idx, iid: newInst.iid });
+        if(box){ box.classList.add('is-replace'); const l = box.querySelector('.result-label'); if(l) l.textContent = '替换 · 旧入暂存'; }
+      } else {
+        results.push({ key, status:'dup', keep:false, cost, idx });
+        if(box){ box.classList.add('is-skip'); const l = box.querySelector('.result-label'); if(l) l.textContent = '重复 · 丢弃'; }
+      }
+    }
+  });
+  // 历史记录不设上限，完整保留
+  state.history.unshift({ time: now, site: '手动录入', items, results });
+  _historyPage = 1;
+  saveState();
+  renderHeatmap(); renderBaseProgressRow(); renderPendingDeletions();
+  renderProgress(); renderRecommend(); renderDetail(); renderHistory();
+  renderSevenDayChart(); renderGaps(); renderWeapons();
+  toast('已提交，新 ' + results.filter(r => r.status === 'new').length + ' 个');
+}
+
+function renderSettings(){
+  const box = document.getElementById('siteList');
+  box.innerHTML = '';
+  state.data.regions.forEach(region => {
+    if(!region.sites.length) return;
+    const collapsed = state.collapsedRegions[region.name] === true;
+
+    const rr = document.createElement('div');
+    rr.className = 'region-header' + (collapsed ? ' collapsed' : '');
+    rr.dataset.region = region.name;
+    const allOn = region.sites.every(s => isSiteEnabled(siteKey(region.name, s.name)));
+    rr.innerHTML = `
+      <div class="region-left">
+        <span class="region-toggle">▼</span>
+        <span>${region.name}</span>
+        <span class="pill" style="margin-left:4px">${region.sites.length}</span>
+      </div>
+      <label class="switch" onclick="event.stopPropagation()"><input type="checkbox" data-region="${region.name}" ${allOn?'checked':''}><span class="slider"></span></label>
+    `;
+    box.appendChild(rr);
+
+    const body = document.createElement('div');
+    body.className = 'region-body';
+    body.style.display = collapsed ? 'none' : 'block';
+    region.sites.forEach(site => {
+      const key = siteKey(region.name, site.name);
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = `
+        <div class="row-label">${site.name}</div>
+        <label class="switch"><input type="checkbox" data-site="${key}" ${isSiteEnabled(key)?'checked':''}><span class="slider"></span></label>
+      `;
+      body.appendChild(row);
+    });
+    box.appendChild(body);
+  });
+
+  box.querySelectorAll('.region-header').forEach(h => {
+    h.addEventListener('click', e => {
+      if(e.target.closest('.switch')) return;
+      const rn = h.dataset.region;
+      state.collapsedRegions[rn] = !state.collapsedRegions[rn];
+      saveState();
+      renderSettings();
+    });
+  });
+  box.querySelectorAll('input[data-site]').forEach(cb => cb.addEventListener('change', e => {
+    state.enabledSites[e.target.dataset.site] = e.target.checked;
+    saveState(); renderRecommend(); renderGaps();
+  }));
+  box.querySelectorAll('input[data-region]').forEach(cb => cb.addEventListener('change', e => {
+    const rn = e.target.dataset.region;
+    const region = state.data.regions.find(r => r.name === rn);
+    region.sites.forEach(s => { state.enabledSites[siteKey(region.name, s.name)] = e.target.checked; });
+    saveState(); renderSettings(); renderRecommend(); renderGaps();
+  }));
+
+  const sprint = document.getElementById('sprintModeToggle');
+  if(sprint) sprint.checked = !!state.sprintMode;
+
+  const extraInput = document.getElementById('extraCopiesInput');
+  if(extraInput) extraInput.value = state.extraCopies || 0;
+
+  const tb = document.getElementById('tieBreakerSelect');
+  if(tb){
+    const opts = ['<option value="">不指定</option>']
+      .concat(state.data.regions.map(r => `<option value="${r.name}">优先${r.name}</option>`))
+      .join('');
+    tb.innerHTML = opts;
+    const regionNames = state.data.regions.map(r => r.name);
+    if(state.tieBreaker && !regionNames.includes(state.tieBreaker)){
+      state.tieBreaker = '';
+      saveState();
+    }
+    tb.value = state.tieBreaker || '';
+  }
+
+  const dd = document.getElementById('doubleDropToggle');
+  if(dd) dd.checked = !!state.doubleDrop;
+
+  const ea = document.getElementById('exactAlgoToggle');
+  if(ea) ea.checked = !!state.exactAlgo;
+
+  const ts = document.getElementById('themeSelect');
+  if(ts) ts.value = getStoredTheme();
+
+  const backupHint = document.getElementById('backupHint');
+  if(backupHint){
+    const last = localStorage.getItem(STORAGE_KEY + '_last_export');
+    if(last){
+      const d = new Date(parseInt(last, 10));
+      const pad = n => String(n).padStart(2, '0');
+      backupHint.innerHTML = `上次导出备份：${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}。建议定期导出以防数据丢失。`;
+    } else {
+      backupHint.textContent = '尚未导出备份，建议在设置中一键复制或导出一次 JSON。';
+    }
+  }
+
+  const sizeHint = document.getElementById('sizeHint');
+  if(sizeHint){
+    const size = estimateStorageSize();
+    if(size > STORAGE_WARN_BYTES){
+      sizeHint.innerHTML = `<span style="color:var(--bad)">⚠ 本地存储已用 ${formatBytes(size)}，接近浏览器上限，建议清理或导出。</span>`;
+    } else {
+      sizeHint.textContent = `本地存储已用：${formatBytes(size)}`;
+    }
+  }
+
+  renderSnapshotList();
+}
+
+/* ================= 数据导入导出 ================= */
+function downloadJSON(obj, filename){
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+function handleExport(){
+  const { weapons, ...rest } = state;
+  downloadJSON(rest, `zmd-optimizer-${new Date().toISOString().slice(0,10)}.json`);
+  localStorage.setItem(STORAGE_KEY + '_last_export', Date.now().toString());
+  renderSettings();
+  renderProgress();
+  toast('已导出完整数据');
+}
+function handleImport(file){
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const data = JSON.parse(reader.result);
+      if(!data.data || !data.collected) throw new Error('文件结构不正确');
+      if(!confirm('导入将覆盖当前数据，是否继续？')) return;
+      makeSnapshot('导入前');
+      state = data;
+      if(!state.enabledSites) state.enabledSites = {};
+      if(!state.pendingDeletions) state.pendingDeletions = [];
+      if(!state.history) state.history = [];
+      if(typeof state.sprintMode !== 'boolean') state.sprintMode = false;
+      if(typeof state.extraCopies !== 'number') state.extraCopies = 0;
+      if(typeof state.tieBreaker !== 'string') state.tieBreaker = '';
+      if(typeof state.doubleDrop !== 'boolean') state.doubleDrop = false;
+      if(typeof state.exactAlgo !== 'boolean') state.exactAlgo = false;
+      if(!state.collapsedRegions || typeof state.collapsedRegions !== 'object') state.collapsedRegions = {};
+      if(!Array.isArray(state.targets)) state.targets = [];
+      state.weapons = deepClone(EXT_WEAPONS);
+      if(!state.data) state.data = deepClone(DEFAULT_DATA);
+      state.data.regions = deepClone(EXT_REGIONS);
+      migrateData(state.data);
+      cleanEnabledSites(state);
+      migrateNames();
+      _historyPage = 1;
+      saveState(); renderAll(); toast('导入成功');
+    }catch(e){ toast('导入失败：' + e.message); }
+  };
+  reader.readAsText(file);
+}
+
+/* ============================================================
+ *  数据校验
+ * ============================================================ */
+let _validateIssues = [];
+
+function validateCollected(){
+  const issues = [];
+  const seenIids = new Set();
+  const cfg = state.data.levelConfig;
+
+  for(const key in state.collected){
+    const entry = { key, problems: [], fixable: true };
+    const parts = key.split('|');
+
+    if(parts.length !== 3){
+      entry.problems.push('键格式错误（应为 基础|附加|技能）');
+      entry.fixable = false;
+      issues.push(entry);
+      continue;
+    }
+    let [b, a, s] = parts;
+
+    if(!state.data.baseAttrs.includes(b)){
+      entry.problems.push(`基础「${b}」不在合法列表`);
+      entry.fixable = false;
+    }
+    if(!state.data.allAddAttrs.includes(a)){
+      const fixed = toFullAdd(a);
+      if(fixed !== a && state.data.allAddAttrs.includes(fixed)){
+        entry.problems.push(`附加「${a}」是简称，可改为「${fixed}」`);
+      } else {
+        entry.problems.push(`附加「${a}」不在合法列表`);
+        entry.fixable = false;
+      }
+    }
+    if(!state.data.allSkillAttrs.includes(s)){
+      entry.problems.push(`技能「${s}」不在合法列表`);
+      entry.fixable = false;
+    }
+
+    const raw = state.collected[key];
+    const arr = Array.isArray(raw) ? raw : [raw];
+    if(!Array.isArray(raw)){
+      entry.problems.push('不是数组（旧格式）');
+    }
+
+    arr.forEach((inst, i) => {
+      const tag = arr.length > 1 ? `第 ${i+1} 份` : '记录';
+      if(!inst || typeof inst !== 'object'){
+        entry.problems.push(`${tag} 不是对象`);
+        entry.fixable = false;
+        return;
+      }
+      if(!inst.iid){
+        entry.problems.push(`${tag} 缺 iid`);
+      } else if(seenIids.has(inst.iid)){
+        entry.problems.push(`${tag} iid 与其它记录重复`);
+      } else {
+        seenIids.add(inst.iid);
+      }
+      const blv = inst.baseLv, alv = inst.addLv, slv = inst.skillLv;
+      let lvOk = true;
+      if(typeof blv !== 'number' || blv < 1 || blv > cfg.base.max){ entry.problems.push(`${tag} 基础等级异常（${blv}）`); lvOk = false; }
+      if(typeof alv !== 'number' || alv < 1 || alv > cfg.add.max){ entry.problems.push(`${tag} 附加等级异常（${alv}）`); lvOk = false; }
+      if(typeof slv !== 'number' || slv < 1 || slv > cfg.skill.max){ entry.problems.push(`${tag} 技能等级异常（${slv}）`); lvOk = false; }
+      if(lvOk){
+        const expected = totalCost(blv, alv, slv);
+        if(inst.cost !== expected){
+          entry.problems.push(`${tag} cost 应为 ${expected}，实际 ${inst.cost}`);
+        }
+      }
+    });
+
+    if(entry.problems.length) issues.push(entry);
+  }
+
+  return issues;
+}
+
+function renderValidateResult(issues){
+  const box = document.getElementById('validateResult');
+  const fixAllBtn = document.getElementById('validateFixAllBtn');
+  if(!box) return;
+  if(!issues.length){
+    box.innerHTML = '<div class="hint" style="color:var(--ok)">✓ 未发现问题，数据健康。</div>';
+    if(fixAllBtn) fixAllBtn.style.display = 'none';
+    return;
+  }
+  const fixableCount = issues.filter(i => i.fixable !== false).length;
+  const rows = issues.map(i => {
+    const status = i.fixable === false
+      ? '<span style="color:var(--bad);font-size:10px">无法自动修复</span>'
+      : '<span style="color:var(--warn);font-size:10px">可修复</span>';
+    return `<div class="snapshot-item" style="align-items:flex-start">
+      <span style="min-width:0;overflow:hidden">
+        <span class="snap-time" style="display:block;word-break:break-all">${i.key}</span>
+        <div style="color:var(--dim);font-size:10px;margin-top:2px">${i.problems.join(' · ')}</div>
+      </span>
+      <span style="flex-shrink:0">${status}</span>
+    </div>`;
+  }).join('');
+  box.innerHTML = `<div class="hint" style="margin-bottom:6px">共 <b style="color:var(--bad)">${issues.length}</b> 处问题，其中 <b style="color:var(--warn)">${fixableCount}</b> 处可自动修复。</div>${rows}`;
+  if(fixAllBtn) fixAllBtn.style.display = fixableCount ? 'block' : 'none';
+}
+
+function handleValidate(){
+  _validateIssues = validateCollected();
+  renderValidateResult(_validateIssues);
+}
+
+function fixAllValidated(){
+  const issues = _validateIssues;
+  if(!issues.length){ toast('无问题'); return; }
+  const fixableIssues = issues.filter(i => i.fixable !== false);
+  if(!fixableIssues.length){ toast('无自动可修复项'); return; }
+  if(!confirm(`修复 ${fixableIssues.length} 处问题？将直接修改本地数据并自动打快照。`)) return;
+  makeSnapshot('数据校验修复前');
+
+  const cfg = state.data.levelConfig;
+  const newCollected = {};
+  const usedIids = new Set();
+  let fixedCount = 0;
+
+  for(const key in state.collected){
+    const raw = state.collected[key];
+    const arr = Array.isArray(raw) ? raw : [raw];
+    const parts = key.split('|');
+    if(parts.length !== 3){
+      newCollected[key] = arr;
+      continue;
+    }
+    let [b, a, s] = parts;
+    if(!state.data.allAddAttrs.includes(a)){
+      const fixedA = toFullAdd(a);
+      if(state.data.allAddAttrs.includes(fixedA)) a = fixedA;
+    }
+    const nk = makeKey(b, a, s);
+
+    const fixedArr = arr.map(inst => {
+      if(!inst || typeof inst !== 'object') return inst;
+      const copy = { ...inst };
+      copy.baseLv = Math.min(cfg.base.max, Math.max(1, parseInt(copy.baseLv, 10) || 1));
+      copy.addLv = Math.min(cfg.add.max, Math.max(1, parseInt(copy.addLv, 10) || 1));
+      copy.skillLv = Math.min(cfg.skill.max, Math.max(1, parseInt(copy.skillLv, 10) || 1));
+      copy.cost = totalCost(copy.baseLv, copy.addLv, copy.skillLv);
+      if(!copy.iid || usedIids.has(copy.iid)){
+        copy.iid = newIid();
+      }
+      usedIids.add(copy.iid);
+      if(!copy.time) copy.time = Date.now();
+      if(!copy.from) copy.from = '校验修复';
+      return copy;
+    });
+
+    if(newCollected[nk]){
+      newCollected[nk] = newCollected[nk].concat(fixedArr);
+    } else {
+      newCollected[nk] = fixedArr;
+    }
+    fixedCount++;
+  }
+
+  state.collected = newCollected;
+  saveState();
+  renderAll();
+  _validateIssues = [];
+  const box = document.getElementById('validateResult');
+  if(box) box.innerHTML = `<div class="hint" style="color:var(--ok)">✓ 已修复 ${fixedCount} 条记录。</div>`;
+  const fixAllBtn = document.getElementById('validateFixAllBtn');
+  if(fixAllBtn) fixAllBtn.style.display = 'none';
+  toast('修复完成');
+}
+
+function renderAll(){
+  invalidateDemandCache();
+  renderHeatmap();
+  renderBaseProgressRow();
+  renderPendingDeletions();
+  renderSettings();
+  renderDropForm();
+  renderRecommend();
+  renderProgress();
+  initDetailFilters();
+  renderDetail();
+  initGapFilters();
+  renderGaps();
+  renderWeapons();
+  renderSevenDayChart();
+  renderHistory();
+  closeEditModal();
+}
+
+function bindEvents(){
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('page-' + tab.dataset.tab).classList.add('active');
+      if(tab.dataset.tab === 'main'){ renderRecommend(); renderHeatmap(); renderBaseProgressRow(); renderPendingDeletions(); }
+      if(tab.dataset.tab === 'detail') renderDetail();
+      if(tab.dataset.tab === 'gaps') renderGaps();
+      if(tab.dataset.tab === 'weapons') renderWeapons();
+      if(tab.dataset.tab === 'history'){ _historyPage = 1; renderSevenDayChart(); renderHistory(); }
+    });
+  });
+
+  document.getElementById('refreshBtn').addEventListener('click', () => {
+    if(state.exactAlgo){
+      toast('精确算法计算中…');
+      setTimeout(renderRecommend, 30);
+    } else {
+      renderRecommend();
+    }
+  });
+  document.getElementById('targetsBtn').addEventListener('click', openTargetsModal);
+  document.getElementById('targetsAddBtn').addEventListener('click', () => {
+    if(_targetsDraft.length >= 3){ toast('最多 3 个目标'); return; }
+    _targetsDraft.push({ base:'', add:'', skill:'' });
+    renderTargetsList();
+  });
+  document.getElementById('targetsClearBtn').addEventListener('click', () => {
+    _targetsDraft = [{ base:'', add:'', skill:'' }];
+    renderTargetsList();
+  });
+  document.getElementById('targetsCancelBtn').addEventListener('click', closeTargetsModal);
+  document.getElementById('targetsSaveBtn').addEventListener('click', saveTargets);
+  document.getElementById('targetsModal').addEventListener('click', e => {
+    if(e.target.id === 'targetsModal') closeTargetsModal();
+  });
+  document.getElementById('dropCount').addEventListener('change', renderDropForm);
+  document.getElementById('submitDrop').addEventListener('click', handleSubmitDrop);
+  document.getElementById('adoptRecBtn').addEventListener('click', () => {
+    if(currentRec) adoptRecommendation(currentRec);
+  });
+  document.getElementById('clearDropBtn').addEventListener('click', () => {
+    currentLock = null;
+    renderDropForm();
+    toast('已清空并解除锁定');
+  });
+  document.getElementById('dropForm').addEventListener('keydown', e => {
+    if(e.key === 'Enter' && e.target.tagName === 'SELECT'){
+      e.preventDefault();
+      handleSubmitDrop();
+    }
+  });
+  document.getElementById('clearPendingBtn').addEventListener('click', () => {
+    if(!state.pendingDeletions.length){ toast('已为空'); return; }
+    if(!confirm('确定已在游戏内删除？清空后不可恢复。')) return;
+    makeSnapshot('清空待删除前');
+    state.pendingDeletions = [];
+    saveState(); renderPendingDeletions(); toast('已清空');
+  });
+  document.getElementById('copyPendingBtn').addEventListener('click', () => {
+    if(!state.pendingDeletions.length){ toast('暂存区为空'); return; }
+    const text = state.pendingDeletions.map(item => {
+      const [b, a, s] = item.key.split('|');
+      return `${b} | ${a} | ${s} (${item.baseLv}/${item.addLv}/${item.skillLv})`;
+    }).join('\n');
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); toast('已复制到剪贴板'); }
+    catch (err) { toast('复制失败，请手动选择文本'); }
+    document.body.removeChild(ta);
+  });
+  document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+    if(!state.history || !state.history.length){ toast('已为空'); return; }
+    if(!confirm('清空全部刷取历史？不影响已收集记录。')) return;
+    makeSnapshot('清空历史前');
+    state.history = [];
+    _historyPage = 1;
+    saveState(); renderHistory(); renderSevenDayChart(); renderProgress(); toast('已清空历史');
+  });
+  document.getElementById('exportHistoryBtn').addEventListener('click', exportHistory);
+  document.getElementById('historyFilter').addEventListener('change', () => {
+    _historyPage = 1;
+    renderHistory();
+  });
+
+  document.getElementById('validateBtn').addEventListener('click', handleValidate);
+  document.getElementById('validateFixAllBtn').addEventListener('click', fixAllValidated);
+  document.getElementById('copyStateBtn').addEventListener('click', copyStateToClipboard);
+  document.getElementById('snapshotBtn').addEventListener('click', () => {
+    makeSnapshot('手动创建');
+    renderSnapshotList();
+    renderSettings();
+    toast('已创建快照');
+  });
+  document.getElementById('exportBtn').addEventListener('click', handleExport);
+  document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
+  document.getElementById('importFile').addEventListener('change', e => {
+    const f = e.target.files[0];
+    if(f) handleImport(f);
+    e.target.value = '';
+  });
+  document.getElementById('weaponRefreshBtn').addEventListener('click', renderWeapons);
+  ['weaponFilterType','weaponFilterCategory','weaponFilterStatus'].forEach(id => {
+    document.getElementById(id).addEventListener('change', renderWeapons);
+  });
+  document.getElementById('sprintModeToggle').addEventListener('change', e => {
+    state.sprintMode = e.target.checked;
+    saveState(); renderRecommend();
+    toast(state.sprintMode ? '冲刺模式已开启' : '冲刺模式已关闭');
+  });
+  const extraInput = document.getElementById('extraCopiesInput');
+  if(extraInput){
+    extraInput.addEventListener('change', e => {
+      let v = parseInt(e.target.value, 10);
+      if(isNaN(v) || v < 0) v = 0;
+      if(v > 5) v = 5;
+      state.extraCopies = v;
+      e.target.value = v;
+      saveState();
+      renderGaps(); renderWeapons(); renderRecommend(); renderDetail();
+      toast('已设置额外份数：' + v);
+    });
+  }
+  const tb = document.getElementById('tieBreakerSelect');
+  if(tb){
+    tb.addEventListener('change', e => {
+      state.tieBreaker = e.target.value || '';
+      saveState(); renderRecommend();
+      toast(state.tieBreaker ? ('平分时优先 ' + state.tieBreaker) : '平分时不指定优先地区');
+    });
+  }
+  const dd = document.getElementById('doubleDropToggle');
+  if(dd){
+    dd.addEventListener('change', e => {
+      state.doubleDrop = e.target.checked;
+      saveState();
+      const dc = document.getElementById('dropCount');
+      if(dc) dc.value = state.doubleDrop ? '6' : '3';
+      renderDropForm();
+      renderRecommend();
+      toast(state.doubleDrop ? '已默认双倍（6 个）' : '已默认普通（3 个）');
+    });
+  }
+  const ea = document.getElementById('exactAlgoToggle');
+  if(ea){
+    ea.addEventListener('change', e => {
+      state.exactAlgo = e.target.checked;
+      saveState();
+      renderRecommend();
+      toast(state.exactAlgo ? '精确算法已开启' : '精确算法已关闭');
+    });
+  }
+  const ts = document.getElementById('themeSelect');
+  if(ts){
+    ts.addEventListener('change', e => {
+      const t = e.target.value;
+      try { localStorage.setItem('zmd-theme', t); } catch(err){}
+      applyTheme(t);
+      toast(t === 'light' ? '已切换为浅色' : '已切换为深色');
+    });
+  }
+  document.getElementById('resetSitesBtn').addEventListener('click', () => {
+    if(!confirm('恢复默认刷取点？将覆盖为仓库里 data/sites.json 的内容。已收集记录保留。')) return;
+    makeSnapshot('恢复默认刷取点前');
+    state.data.regions = deepClone(EXT_REGIONS);
+    getAllSites().forEach(s => { if(state.enabledSites[s.key] === undefined) state.enabledSites[s.key] = true; });
+    cleanEnabledSites(state);
+    migrateNames();
+    saveState(); renderAll(); toast('已恢复');
+  });
+  document.getElementById('resetAllBtn').addEventListener('click', () => {
+    if(!confirm('重置全部数据？不可恢复。')) return;
+    makeSnapshot('重置全部前');
+    state = defaultState();
+    currentLock = null;
+    migrateNames();
+    _historyPage = 1;
+    saveState(); renderAll(); toast('已重置');
+  });
+  ['detailFilterBase','detailFilterAdd','detailFilterSkill'].forEach(id => {
+    document.getElementById(id).addEventListener('change', renderDetail);
+  });
+  document.getElementById('detailClearFilter').addEventListener('click', () => {
+    document.getElementById('detailFilterBase').value = '';
+    document.getElementById('detailFilterAdd').value = '';
+    document.getElementById('detailFilterSkill').value = '';
+    renderDetail();
+  });
+  ['gapFilterBase','gapFilterAdd','gapFilterSkill','gapFilterSource'].forEach(id => {
+    document.getElementById(id).addEventListener('change', renderGaps);
+  });
+  document.getElementById('gapRefreshBtn').addEventListener('click', renderGaps);
+  document.getElementById('gapCopyBtn').addEventListener('click', copyGapList);
+  document.getElementById('editSaveBtn').addEventListener('click', saveEditModal);
+  document.getElementById('editCancelBtn').addEventListener('click', closeEditModal);
+  document.getElementById('editDeleteBtn').addEventListener('click', deleteEditKey);
+  document.getElementById('editMaxBtn').addEventListener('click', () => {
+    const cfg = state.data.levelConfig;
+    document.getElementById('editBaseLv').value = cfg.base.max;
+    document.getElementById('editAddLv').value = cfg.add.max;
+    document.getElementById('editSkillLv').value = cfg.skill.max;
+    refreshEditCostPreview();
+  });
+  ['editBaseLv','editAddLv','editSkillLv'].forEach(id => {
+    document.getElementById(id).addEventListener('change', refreshEditCostPreview);
+  });
+  document.getElementById('editModal').addEventListener('click', e => {
+    if(e.target.id === 'editModal') closeEditModal();
+  });
+  document.addEventListener('keydown', e => {
+    if(e.key !== 'Escape') return;
+    if(document.getElementById('editModal').classList.contains('show')) closeEditModal();
+    if(document.getElementById('targetsModal').classList.contains('show')) closeTargetsModal();
+  });
+}
+
+/* ============================================================
+ *  启动
+ * ============================================================ */
+async function bootstrap(){
+  try {
+    const [wRes, sRes] = await Promise.all([
+      fetch('./data/weapons.json'),
+      fetch('./data/sites.json')
+    ]);
+    if(!wRes.ok) throw new Error('weapons.json 加载失败：HTTP ' + wRes.status);
+    if(!sRes.ok) throw new Error('sites.json 加载失败：HTTP ' + sRes.status);
+    const wJson = await wRes.json();
+    const sJson = await sRes.json();
+    if(!Array.isArray(wJson)) throw new Error('weapons.json 格式应为数组');
+    if(!sJson || !Array.isArray(sJson.regions)) throw new Error('sites.json 缺少 regions 字段');
+
+    EXT_WEAPONS = wJson;
+    EXT_REGIONS = sJson.regions;
+
+    state = loadState();
+    migrateNames();
+    applyTheme(getStoredTheme());
+    const dc = document.getElementById('dropCount');
+    if(dc) dc.value = state.doubleDrop ? '6' : '3';
+    bindEvents();
+    renderAll();
+  } catch(e) {
+    console.error(e);
+    document.body.innerHTML = `
+      <div class="load-error">
+        <h2>数据加载失败</h2>
+        <p>${e.message}</p>
+        <p style="font-size:12px;color:var(--dim)">
+          请确认仓库根目录下存在 <code>data/weapons.json</code> 和 <code>data/sites.json</code>，
+          且格式正确。若从本地 <code>file://</code> 直接打开，因浏览器安全策略无法加载本地 JSON，
+          请改用 GitHub Pages 或本地 HTTP 服务器访问。
+        </p>
+      </div>
+    `;
+  }
+}
+
+bootstrap();
+</script>
+</body>
+</html>
