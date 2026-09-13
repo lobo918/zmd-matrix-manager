@@ -114,10 +114,28 @@ details summary::marker{color:var(--accent)}
 #page-main.active{display:grid;grid-template-rows:minmax(340px,1fr) auto auto;gap:8px;
   padding:8px 12px;min-height:0;overflow-y:auto;}
 
-/* 桌面端：progressCard 固定高度，ETA 和备份提示绝对定位 */
-#progressCard{position:relative;padding-bottom:26px;}
-#etaHint{position:absolute;left:14px;bottom:9px;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-#backupWarn{position:absolute;right:14px;bottom:9px;max-width:38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* 底部信息行：ETA 靠左，备份提示靠右，高度稳定 */
+.progress-foot{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  gap:12px;
+  margin-top:4px;
+  min-height:1.5em;
+}
+#etaHint{
+  font-size:10.5px;
+  color:var(--dim2);
+  flex:1;
+  min-width:0;
+}
+#backupWarn{
+  font-size:10.5px;
+  color:var(--warn);
+  text-align:right;
+  flex-shrink:0;
+  display:none;
+}
 .main-top{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:8px;min-height:0;overflow:hidden;}
 
 @media (max-width: 1000px){
@@ -225,9 +243,10 @@ html.is-phone .hint{font-size:12px;}
 /* 手机端全局进度卡片紧凑化 */
 html.is-phone #progressCard{padding:10px 12px;}
 html.is-phone #progressCard #baseProgressRow{display:none !important;}
-html.is-phone #progressCard #etaHint{display:none;}
+html.is-phone #progressCard #etaHint{display:none !important;}
 html.is-phone #progressCard .progress-bar{margin:4px 0 0;}
-html.is-phone #backupWarn{position:static;max-width:none;white-space:normal;}
+html.is-phone .progress-foot{justify-content:flex-start;}
+html.is-phone #backupWarn{text-align:left;display:none;}
 
 html.is-phone .matrix-item .matrix-line{grid-template-columns:2fr 1fr;}
 
@@ -566,8 +585,10 @@ button.secondary:disabled:hover{background:var(--card3)}
     </div>
     <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
     <div id="baseProgressRow" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;font-size:10.5px;color:var(--dim)"></div>
-    <div class="hint" id="etaHint" style="font-size:10.5px;color:var(--dim2)"></div>
-    <div class="hint" id="backupWarn" style="font-size:10.5px;color:var(--warn);display:none"></div>
+    <div class="progress-foot">
+      <div class="hint" id="etaHint"></div>
+      <div class="hint" id="backupWarn"></div>
+    </div>
   </div>
 </div>
 
