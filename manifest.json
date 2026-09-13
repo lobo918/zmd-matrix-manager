@@ -1,8 +1,9 @@
 {
   "name": "终末地基质全收集管理器",
   "short_name": "基质管理器",
+  "id": "/zmd-matrix-manager/",
   "description": "《明日方舟：终末地》基质全收集追踪与刷取推荐工具",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",
