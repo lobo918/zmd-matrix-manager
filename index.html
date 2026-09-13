@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>终末地基质全收集管理器</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="基质管理器">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="icon" type="image/png" href="./icon-192.png">
 <script>
 (function(){
   try {
@@ -121,7 +128,23 @@ details summary::marker{color:var(--accent)}
 .main-left > .card{flex:1;display:flex;flex-direction:column;min-height:0}
 .main-right > .card:first-child{flex:0 0 auto;display:flex;flex-direction:column;max-height:230px;padding:9px 11px;overflow:hidden;}
 .main-right > .card:first-child h3{margin:0 0 6px;flex-shrink:0}
-.rec-body{flex:1 1 auto;overflow-y:auto;min-height:0;line-height:1.4}
+.rec-body{flex:1 1 auto;overflow-y:auto;min-height:0;line-height:1.4;position:relative}
+.rec-body.loading{opacity:.35;transition:opacity .15s}
+.rec-body.loading::after{
+  content:'计算中…';
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-size:12px;font-weight:700;color:var(--accent);
+  letter-spacing:.5px;pointer-events:none;white-space:nowrap;
+  text-shadow:0 0 8px var(--bg),0 0 16px var(--bg);
+}
+@keyframes recFlash{
+  0%   { box-shadow: 0 0 0 0 rgba(91,163,255,.6); }
+  100% { box-shadow: 0 0 0 16px rgba(91,163,255,0); }
+}
+#recCard.rec-flash{ animation: recFlash 1.4s ease-out; }
+button:disabled{opacity:.55;cursor:not-allowed}
+button:disabled:hover{background:var(--accent)}
+button.secondary:disabled:hover{background:var(--card3)}
 .main-right > .card:first-child .rec-adopt{flex-shrink:0;margin-top:6px}
 .main-right > .card:last-child{flex:1 1 0;display:flex;flex-direction:column;min-height:120px;padding:9px 11px;overflow:hidden;}
 .main-right > .card:last-child .pending-list{flex:1;overflow-y:auto;min-height:0}
@@ -135,11 +158,17 @@ details summary::marker{color:var(--accent)}
 .hm-sq.low{background:#3c6b3f}.hm-sq.mid{background:#4a9a4a}
 .hm-sq.high{background:#5ccf6d;box-shadow:0 0 3px rgba(92,207,109,.7)}
 .hm-sq.master{background:#8dff90;box-shadow:0 0 5px rgba(141,255,144,1)}
+.hm-sq.recent-master{background:#ffd54f;box-shadow:0 0 6px rgba(255,213,79,1)}
+.hm-sq.recent-edit{background:#4fc3f7;box-shadow:0 0 4px rgba(79,195,247,.85)}
+.hm-sq.recent-fetch{background:#a06cff;box-shadow:0 0 4px rgba(160,108,255,.85)}
 [data-theme="light"] .hm-sq{background:#c8cdd5}
 [data-theme="light"] .hm-sq.low{background:#9bc49d;box-shadow:none}
 [data-theme="light"] .hm-sq.mid{background:#6db27a;box-shadow:none}
 [data-theme="light"] .hm-sq.high{background:#4cae5c;box-shadow:0 0 3px rgba(76,174,92,.5)}
 [data-theme="light"] .hm-sq.master{background:#2e9a3e;box-shadow:0 0 5px rgba(46,154,62,.7)}
+[data-theme="light"] .hm-sq.recent-master{background:#e8a800;box-shadow:0 0 6px rgba(232,168,0,.8)}
+[data-theme="light"] .hm-sq.recent-edit{background:#0288d1;box-shadow:0 0 4px rgba(2,136,209,.6)}
+[data-theme="light"] .hm-sq.recent-fetch{background:#8a4dff;box-shadow:0 0 4px rgba(138,77,255,.6)}
 .hm-tooltip{position:fixed;z-index:999;pointer-events:none;background:rgba(30, 34, 42, 0.95);
   border:1px solid var(--border2);border-radius:var(--radius);padding:8px 12px;font-size:11px;
   color:var(--text);line-height:1.6;box-shadow:0 8px 24px rgba(0,0,0,.6);
@@ -370,7 +399,7 @@ details summary::marker{color:var(--accent)}
       </div>
     </div>
     <div class="main-right">
-      <div class="card">
+      <div class="card" id="recCard">
         <h3>
           <span>推荐 <span class="pill warn" id="targetPill" style="display:none"></span></span>
           <span style="display:flex;gap:6px">
@@ -525,7 +554,7 @@ details summary::marker{color:var(--accent)}
 <div id="page-settings" class="page">
   <div class="card">
     <h3><span>外观</span></h3>
-    <div class="row">
+        <div class="row">
       <div class="row-label">主题</div>
       <select id="themeSelect" style="width:140px">
         <option value="dark">深色</option>
@@ -533,6 +562,16 @@ details summary::marker{color:var(--accent)}
       </select>
     </div>
     <div class="hint" style="margin-top:6px">主题是浏览器本地偏好，不随导入/导出或数据快照迁移。</div>
+    <div class="row" style="margin-top:10px">
+      <div class="row-label">近期收集高亮天数</div>
+      <input type="number" id="recentHighlightDaysInput" min="0" max="30" value="7" style="width:70px">
+    </div>
+    <div class="hint" style="margin-top:6px">
+      热力图近期高亮：近 N 天刷取得到 → <span style="color:#a06cff;font-weight:600">紫色</span>；
+      近 N 天手动修改过 → <span style="color:#4fc3f7;font-weight:600">蓝色</span>；
+      近 N 天修改为满级 → <span style="color:#e8a800;font-weight:600">金色</span>。
+      设为 0 关闭。
+    </div>
   </div>
 
   <div class="card">
@@ -549,6 +588,11 @@ details summary::marker{color:var(--accent)}
     </div>
     <div class="hint" style="margin-top:6px">开启后，来源较少的组合权重会以平方计入；进度超过 85% 时也会自动启用。</div>
     <div class="row" style="margin-top:10px">
+      <div class="row-label">按武器需求保留额外基质</div>
+      <label class="switch"><input type="checkbox" id="respectWeaponDemandToggle"><span class="slider"></span></label>
+    </div>
+    <div class="hint" style="margin-top:6px">开启后，多把武器共用同一基质时会按武器数量要求保留多份；关闭后只要求保留 1 份（适合一个基质换给多把武器用）。</div>
+    <div class="row" id="extraCopiesRow" style="margin-top:10px">
       <div class="row-label">额外保留份数（在武器需求基础上多留）</div>
       <input type="number" id="extraCopiesInput" min="0" max="5" value="0" style="width:70px">
     </div>
@@ -584,15 +628,17 @@ details summary::marker{color:var(--accent)}
 
   <div class="card">
     <h3><span>数据管理</span></h3>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button id="copyStateBtn" class="secondary">📋 一键复制 JSON</button>
-      <button id="exportBtn" class="secondary">导出 JSON</button>
+      <button id="exportFullBtn" class="secondary">导出完整备份</button>
+      <button id="exportLiteBtn" class="secondary">导出精简版</button>
       <button id="importBtn" class="secondary">导入 JSON</button>
       <input type="file" id="importFile" accept=".json" style="display:none">
       <button id="snapshotBtn" class="secondary">创建快照</button>
       <button id="resetSitesBtn" class="secondary">恢复默认刷取点</button>
       <button id="resetAllBtn" class="danger">重置全部</button>
     </div>
+    <div class="hint" style="margin-top:6px">完整备份含刷取历史，用于换设备完整迁移；精简版不含历史，文件更小。导入精简版时当前历史记录会保留。</div>
     <div class="hint" id="backupHint" style="margin-top:8px"></div>
     <div class="hint" id="sizeHint" style="margin-top:4px"></div>
     <details style="margin-top:10px">
@@ -685,6 +731,8 @@ const EXACT_ALGO_TOP_N = 30;
 const SECOND_PASS_DISCOUNT = 0.5;
 const HISTORY_PAGE_SIZE = 20;
 const NEW_BASE_ORDER = ['敏捷', '力量', '意志', '智识', '主能力'];
+const ETA_BATCH_SIZE = 60;
+const ETA_MAX_ITER = 60;
 const deepClone = o => JSON.parse(JSON.stringify(o));
 
 /* ============================================================
@@ -701,6 +749,8 @@ function defaultState(){
     history: [],
     sprintMode: false,
     extraCopies: 0,
+    respectWeaponDemand: true,
+    recentHighlightDays: 7,
     tieBreaker: '',
     doubleDrop: false,
     exactAlgo: false,
@@ -739,6 +789,8 @@ function loadState(){
       if(!s.history) s.history = [];
       if(typeof s.sprintMode !== 'boolean') s.sprintMode = false;
       if(typeof s.extraCopies !== 'number') s.extraCopies = 0;
+      if(typeof s.respectWeaponDemand !== 'boolean') s.respectWeaponDemand = true;
+      if(typeof s.recentHighlightDays !== 'number') s.recentHighlightDays = 7;
       if(typeof s.tieBreaker !== 'string') s.tieBreaker = '';
       if(typeof s.doubleDrop !== 'boolean') s.doubleDrop = false;
       if(typeof s.exactAlgo !== 'boolean') s.exactAlgo = false;
@@ -765,9 +817,14 @@ let _historyPage = 1;
 /* ============================================================
  *  命名统一
  * ============================================================ */
+let _addSetCache = null;
+function getAllAddSet(){
+  if(!_addSetCache) _addSetCache = new Set(state.data.allAddAttrs);
+  return _addSetCache;
+}
 function toFullAdd(name){
   if(!name) return '';
-  if(state.data.allAddAttrs.includes(name)) return name;
+  if(getAllAddSet().has(name)) return name;
   const aliases = state.data.addAliases || {};
   if(aliases[name]) return aliases[name];
   const full = state.data.allAddAttrs.find(a => a.startsWith(name));
@@ -808,6 +865,9 @@ function buildWeaponDemandMap(){
 function invalidateDemandCache(){ _demandCache = null; }
 
 function getCapacity(key){
+  if(!state.respectWeaponDemand){
+    return 1;
+  }
   const demand = buildWeaponDemandMap()[key] || 1;
   const extra = state.extraCopies || 0;
   return Math.max(1, demand + extra);
@@ -837,13 +897,51 @@ function getWorstIndex(arr){
   }
   return idx;
 }
+let _recentFetchKeys = null;
+let _recentEditKeys = null;
+
+function buildRecentFetchKeys(days){
+  const set = new Set();
+  if(!days || days <= 0) return set;
+  const cutoff = Date.now() - days * 86400000;
+  for(const h of (state.history || [])){
+    if(h.time < cutoff) continue;
+    for(const r of (h.results || [])){
+      if(r.status === 'new' || (r.status === 'dup' && r.keep)){
+        set.add(r.key);
+      }
+    }
+  }
+  return set;
+}
+
+function buildRecentEditKeys(days){
+  const set = new Set();
+  if(!days || days <= 0) return set;
+  const cutoff = Date.now() - days * 86400000;
+  for(const key in state.collected){
+    const arr = getCollectedArr(key);
+    if(arr.some(x => x.from === '手动修改' && x.time >= cutoff)){
+      set.add(key);
+    }
+  }
+  return set;
+}
+
 function bestSqClass(key){
-  const best = getBestItem(key);
-  if(!best) return '';
-  const c = best.cost;
-  if(c <= 0) return 'master';
-  if(c < 500) return 'high';
-  if(c < 1500) return 'mid';
+  const arr = getCollectedArr(key);
+  if(!arr.length) return '';
+  const best = arr.reduce((b, x) => x.cost < b.cost ? x : b, arr[0]);
+  const isMaster = best.cost <= 0;
+  if(_recentEditKeys && _recentEditKeys.has(key)){
+    return isMaster ? 'recent-master' : 'recent-edit';
+  }
+  if(_recentFetchKeys && _recentFetchKeys.has(key)){
+    return isMaster ? 'recent-master' : 'recent-fetch';
+  }
+  if(isMaster) return 'master';
+  if(best.cost < 500) return 'high';
+  if(best.cost < 1500) return 'mid';
   return 'low';
 }
 
@@ -913,10 +1011,9 @@ function migrateNames(){
       });
     });
   }
-  if(changed){
+    if(changed){
     try{
-      const { weapons, ...rest } = state;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeState()));
     }catch(e){ console.warn('迁移保存失败', e); }
   }
 }
@@ -924,8 +1021,7 @@ function migrateNames(){
 function saveState(){
   invalidateDemandCache();
   try{
-    const { weapons, ...rest } = state;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeState()));
   }
   catch(e){ toast('保存失败：'+e.message); }
 }
@@ -964,7 +1060,11 @@ function toast(msg){
   el._t = setTimeout(() => el.classList.remove('show'), 1600);
 }
 
+let _srcMapCache = null;
+let _srcMapCacheKey = '';
 function buildSourceMap(enabledSites){
+  const key = enabledSites.map(s => s.key).join('|');
+  if(_srcMapCacheKey === key && _srcMapCache) return _srcMapCache;
   const map = {};
   for(const site of enabledSites){
     for(const add of site.adds){
@@ -975,8 +1075,11 @@ function buildSourceMap(enabledSites){
       }
     }
   }
+  _srcMapCacheKey = key;
+  _srcMapCache = map;
   return map;
 }
+
 const getSrc = (map, a, s) => {
   const v = map[a + '|' + s];
   return v ? v.length : 0;
@@ -993,7 +1096,10 @@ function applyTheme(theme){
   } else {
     document.documentElement.removeAttribute('data-theme');
   }
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if(meta) meta.setAttribute('content', theme === 'light' ? '#f4f6f9' : '#0f1115');
 }
+
 function getStoredTheme(){
   try { return localStorage.getItem('zmd-theme') || 'dark'; }
   catch(e){ return 'dark'; }
@@ -1004,9 +1110,8 @@ function getStoredTheme(){
  * ============================================================ */
 function makeSnapshot(reason){
   try {
-    const { weapons, ...rest } = state;
     const ts = Date.now();
-    const payload = { ts, reason, data: rest };
+    const payload = { ts, reason, data: serializeState() };
     localStorage.setItem(SNAPSHOT_PREFIX + ts, JSON.stringify(payload));
     pruneSnapshots();
   } catch(e) {
@@ -1051,6 +1156,8 @@ function restoreSnapshot(ts){
     if(!restored.history) restored.history = [];
     if(typeof restored.sprintMode !== 'boolean') restored.sprintMode = false;
     if(typeof restored.extraCopies !== 'number') restored.extraCopies = 0;
+        if(typeof restored.respectWeaponDemand !== 'boolean') restored.respectWeaponDemand = true;
+    if(typeof restored.recentHighlightDays !== 'number') restored.recentHighlightDays = 7;
     if(typeof restored.tieBreaker !== 'string') restored.tieBreaker = '';
     if(typeof restored.doubleDrop !== 'boolean') restored.doubleDrop = false;
     if(typeof restored.exactAlgo !== 'boolean') restored.exactAlgo = false;
@@ -1117,10 +1224,41 @@ function formatBytes(n){
   if(n < 1024*1024) return (n/1024).toFixed(1) + 'KB';
   return (n/1024/1024).toFixed(2) + 'MB';
 }
+function serializeState(){
+  const { weapons, ...rest } = state;
+  if(rest.data){
+    const { regions, ...dataRest } = rest.data;
+    rest.data = dataRest;
+  }
+  return rest;
+}
+
+function buildExportPayload(includeHistory){
+  const payload = {
+    type: 'zmd-matrix-manager',
+    version: 2,
+    exportedAt: Date.now(),
+    exportedAtReadable: new Date().toISOString(),
+    collected: state.collected,
+    pendingDeletions: state.pendingDeletions,
+    enabledSites: state.enabledSites,
+    targets: state.targets,
+    collapsedRegions: state.collapsedRegions,
+    sprintMode: state.sprintMode,
+    extraCopies: state.extraCopies,
+    respectWeaponDemand: state.respectWeaponDemand,
+    recentHighlightDays: state.recentHighlightDays,
+    tieBreaker: state.tieBreaker,
+    doubleDrop: state.doubleDrop,
+    exactAlgo: state.exactAlgo
+  };
+  if(includeHistory) payload.history = state.history;
+  return payload;
+}
+
 function copyStateToClipboard(){
   try {
-    const { weapons, ...rest } = state;
-    const text = JSON.stringify(rest, null, 2);
+    const text = JSON.stringify(buildExportPayload(true), null, 2);
     const ta = document.createElement('textarea');
     ta.value = text;
     ta.style.position = 'fixed';
@@ -1131,7 +1269,7 @@ function copyStateToClipboard(){
     document.body.removeChild(ta);
     if(ok){
       localStorage.setItem(STORAGE_KEY + '_last_export', Date.now().toString());
-      toast(`已复制（${formatBytes(text.length*2)}）`);
+      toast(`已复制完整备份（${formatBytes(text.length*2)}）`);
       renderSettings();
       renderProgress();
     } else {
@@ -1161,6 +1299,8 @@ function renderHeatmap(){
   const hm = document.getElementById('heatmap');
   const skills = state.data.allSkillAttrs;
   const adds = state.data.allAddAttrs;
+  _recentFetchKeys = buildRecentFetchKeys(state.recentHighlightDays);
+  _recentEditKeys = buildRecentEditKeys(state.recentHighlightDays);
   hm.innerHTML = '';
   const corner = document.createElement('div');
   hm.appendChild(corner);
@@ -1191,7 +1331,10 @@ function renderHeatmap(){
           collectedCount++;
           const best = getBestItem(key);
           const suffix = arr.length > 1 ? ` ×${arr.length}` : '';
-          lines.push(`${base}(${best.baseLv}/${best.addLv}/${best.skillLv})${suffix}`);
+          let recentMark = '';
+          if(_recentEditKeys && _recentEditKeys.has(key)) recentMark = ' ✎';
+          else if(_recentFetchKeys && _recentFetchKeys.has(key)) recentMark = ' ★';
+          lines.push(`${base}(${best.baseLv}/${best.addLv}/${best.skillLv})${suffix}${recentMark}`);
         }
       });
       const html = `<b>${toShortAdd(add)} + ${skill}</b>\n` +
@@ -1274,6 +1417,8 @@ function computeRecommendationRaw(enabled){
     let targetHits = 0;
     if(hasTargets){
       for(const t of targets){
+        const targetKey = makeKey(t.base, t.add, t.skill);
+        if(isKeySaturated(targetKey)) continue;
         if(cand.lockType === 'add'){
           if(t.add === cand.lockValue
              && cand.baseCombo.includes(t.base)
@@ -1453,7 +1598,44 @@ function computeRecommendation(){
   };
 }
 
-function renderRecommend(){
+let _booted = false;
+let _lastRecSig = '';
+let _lastFlashTime = 0;
+const FLASH_DELAY_MS = 600;
+
+function flashRecommendCard(){
+  const card = document.getElementById('recCard');
+  if(!card) return;
+  card.classList.remove('rec-flash');
+  void card.offsetWidth;   // 强制 reflow，重置动画
+  card.classList.add('rec-flash');
+  clearTimeout(card._flashTimer);
+  card._flashTimer = setTimeout(() => card.classList.remove('rec-flash'), 950);
+}
+
+function withLoadingFeedback(btn, bodyEl, task){
+  const MIN_MS = 250;
+  const t0 = performance.now();
+  btn.disabled = true;
+  const origText = btn.textContent;
+  btn.textContent = '计算中…';
+  bodyEl.classList.add('loading');
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const wait = Math.max(0, MIN_MS - (performance.now() - t0));
+      setTimeout(() => {
+        try { task(); }
+        finally {
+          btn.disabled = false;
+          btn.textContent = origText;
+          bodyEl.classList.remove('loading');
+        }
+      }, wait);
+    });
+  });
+}
+
+function renderRecommend(forceFlash){
   const body = document.getElementById('recommendBody');
   const adoptBtn = document.getElementById('adoptRecBtn');
   const targetPill = document.getElementById('targetPill');
@@ -1534,6 +1716,22 @@ function renderRecommend(){
     ${warnHtml}
   `;
   adoptBtn.style.display = 'block';
+
+  const sig = rec ? (rec.site.key + '|' + rec.lockType + '|' + rec.lockValue + '|' + rec.baseCombo.join('·')) : '';
+  const now = Date.now();
+  const changed = sig && sig !== _lastRecSig;
+  if(_booted && sig && (forceFlash || changed) && now - _lastFlashTime > 300){
+    _lastFlashTime = now;
+    const card = document.getElementById('recCard');
+    if(card){
+      clearTimeout(card._flashDelayTimer);
+      const delay = forceFlash ? 0 : FLASH_DELAY_MS;
+      card._flashDelayTimer = setTimeout(() => {
+        flashRecommendCard();
+      }, delay);
+    }
+  }
+  _lastRecSig = sig;
 }
 
 function adoptRecommendation(rec){
@@ -1564,6 +1762,161 @@ function renderPendingDeletions(){
   }).join('');
 }
 
+/* ============================================================
+ *  ETA 分段模拟
+ * ============================================================ */
+let _etaCache = null;
+let _etaCacheKey = '';
+let _etaTimer = null;
+
+function computeEtaCacheKey(){
+  let collectedCount = 0;
+  let saturatedCount = 0;
+  for(const k in state.collected){
+    const arr = getCollectedArr(k);
+    if(arr.length){
+      collectedCount++;
+      if(arr.some(x => x.cost <= 0)) saturatedCount++;
+    }
+  }
+  const enabledKeys = getAllSites()
+    .filter(s => isSiteEnabled(s.key))
+    .map(s => s.key)
+    .sort()
+    .join(',');
+  return [
+    collectedCount,
+    saturatedCount,
+    state.respectWeaponDemand ? 1 : 0,
+    state.extraCopies || 0,
+    state.doubleDrop ? 1 : 0,
+    state.sprintMode ? 1 : 0,
+    state.tieBreaker || '',
+    enabledKeys
+  ].join('|');
+}
+
+function fillSimFromCandidate(sim, cand, maxFill, srcMap, alpha){
+  const list = [];
+  if(cand.lockType === 'add'){
+    for(const b of cand.baseCombo){
+      for(const s of cand.site.skills){
+        const key = makeKey(b, cand.lockValue, s);
+        if(!sim[key]) sim[key] = [];
+        if(sim[key].length < getCapacity(key)){
+          const src = getSrc(srcMap, cand.lockValue, s) || 1;
+          list.push({ key, weight: 1 / Math.pow(src, alpha) });
+        }
+      }
+    }
+  } else {
+    for(const b of cand.baseCombo){
+      for(const a of cand.site.adds){
+        const key = makeKey(b, a, cand.lockValue);
+        if(!sim[key]) sim[key] = [];
+        if(sim[key].length < getCapacity(key)){
+          const src = getSrc(srcMap, a, cand.lockValue) || 1;
+          list.push({ key, weight: 1 / Math.pow(src, alpha) });
+        }
+      }
+    }
+  }
+  list.sort((a, b) => b.weight - a.weight);
+  const take = Math.min(maxFill, list.length);
+  for(let i = 0; i < take; i++){
+    sim[list[i].key].push({
+      baseLv: 6, addLv: 6, skillLv: 3, cost: 0,
+      iid: 'eta_' + i + '_' + Math.random().toString(36).slice(2, 6),
+      time: 0, from: 'eta'
+    });
+  }
+  return take;
+}
+
+function doEstimateRemainingDrops(){
+  const enabled = getAllSites().filter(s => isSiteEnabled(s.key));
+  if(!enabled.length) return null;
+
+  const total = totalCombinations();
+  let collectedCount = 0;
+  for(const k in state.collected){
+    if(getCollectedArr(k).length > 0) collectedCount++;
+  }
+  let remain = total - collectedCount;
+  if(remain <= 0) return { drops: 0, remain: 0, iter: 0, converged: true };
+
+  const sim = {};
+  for(const k in state.collected){
+    const arr = getCollectedArr(k);
+    if(arr.length) sim[k] = arr.slice();
+  }
+
+  const dropCount = state.doubleDrop ? 6 : 3;
+  const pHit = 1 - Math.pow(1 - 1/24, dropCount);
+  const alpha = state.sprintMode ? 2 : 1;
+  const srcMap = buildSourceMap(enabled);
+
+  let drops = 0;
+  let iter = 0;
+  let converged = false;
+
+  while(iter < ETA_MAX_ITER){
+    iter++;
+    _collectedView = sim;
+    let rec;
+    try {
+      rec = computeRecommendationRaw(enabled);
+    } finally {
+      _collectedView = null;
+    }
+    if(!rec || !rec.best) break;
+    const best = rec.best;
+    if(best.blanks <= 0){ converged = true; break; }
+
+    const expPer = best.blanks * pHit;
+    if(expPer < 0.01){ converged = true; break; }
+
+    const batch = Math.min(ETA_BATCH_SIZE, remain);
+    const filled = fillSimFromCandidate(sim, best, batch, srcMap, alpha);
+    if(filled <= 0){ converged = true; break; }
+    drops += filled / expPer;
+    remain -= filled;
+    if(remain <= 0){ converged = true; break; }
+  }
+
+  return { drops: Math.ceil(drops), remain, iter, converged };
+}
+
+function getEtaEstimate(){
+  const key = computeEtaCacheKey();
+  if(key === _etaCacheKey && _etaCache !== null) return _etaCache;
+  const result = doEstimateRemainingDrops();
+  _etaCacheKey = key;
+  _etaCache = result;
+  return result;
+}
+
+function scheduleEtaUpdate(){
+  clearTimeout(_etaTimer);
+  _etaTimer = setTimeout(updateEtaHint, 120);
+}
+
+function updateEtaHint(){
+  const etaEl = document.getElementById('etaHint');
+  if(!etaEl) return;
+  const est = getEtaEstimate();
+  if(!est){
+    etaEl.textContent = '没有启用的刷取点，无法预估。';
+    return;
+  }
+    if(est.drops <= 0){
+    etaEl.innerHTML = '✓ 全部组合已收集，已毕业！';
+    return;
+  }
+  const warnStr = est.converged ? '' : ' <span style="color:var(--warn)">估算未完全收敛，实际可能更多。</span>';
+  etaEl.innerHTML = `分段模拟预计还需约 <b>${est.drops}</b> 次提交。${warnStr}`;
+}
+
 function renderProgress(){
   let count = 0;
   for(const k in state.collected){
@@ -1575,24 +1928,7 @@ function renderProgress(){
   document.getElementById('progressFill').style.width = (count / total * 100).toFixed(2) + '%';
   document.getElementById('progressPill').textContent = `${count} / ${total}`;
 
-  const etaEl = document.getElementById('etaHint');
-  if(etaEl){
-    let weekNew = 0;
-    const now = Date.now();
-    const sevenDaysAgo = now - 7 * 86400000;
-    state.history.forEach(h => {
-      if(h.time >= sevenDaysAgo){
-        weekNew += (h.results || []).filter(r => r.status === 'new').length;
-      }
-    });
-    if(weekNew > 0){
-      const remain = total - count;
-      const days = Math.ceil(remain / (weekNew / 7));
-      etaEl.innerHTML = `按最近 7 天速度（日均 ${ (weekNew/7).toFixed(1) } 个），还需约 <b>${days}</b> 天毕业。`;
-    } else {
-      etaEl.textContent = '暂无近期刷取记录，无法预估毕业时间。';
-    }
-  }
+  scheduleEtaUpdate();
 
   const warnEl = document.getElementById('backupWarn');
   if(warnEl){
@@ -1944,6 +2280,7 @@ function isWeaponComplete(w){
   return arr.some(x => x.cost <= 0);
 }
 function renderWeaponSlots(key, demand){
+  const displayDemand = state.respectWeaponDemand ? demand : 1;
   const arr = getCollectedArr(key);
   const sorted = arr.slice().sort((a, b) => {
     if(a.cost <= 0 && b.cost > 0) return -1;
@@ -1951,15 +2288,15 @@ function renderWeaponSlots(key, demand){
     return a.cost - b.cost;
   });
   let slots = '';
-  for(let i = 0; i < demand; i++){
+  for(let i = 0; i < displayDemand; i++){
     const item = sorted[i];
     let cls = 'weapon-slot';
     if(item){ cls += item.cost <= 0 ? ' master' : ' partial'; }
     slots += `<span class="${cls}"></span>`;
   }
   const have = arr.length;
-  const cls = have >= demand ? 'ok' : (have > 0 ? 'partial' : 'none');
-  return `<span class="weapon-slots">${slots}<span class="weapon-slot-count ${cls}">${have}/${demand} 份</span></span>`;
+  const cls = have >= displayDemand ? 'ok' : (have > 0 ? 'partial' : 'none');
+  return `<span class="weapon-slots">${slots}<span class="weapon-slot-count ${cls}">${have}/${displayDemand} 份</span></span>`;
 }
 function isWeaponTargeted(w){
   const k = makeKey(w.base, w.add, w.skill);
@@ -2399,12 +2736,17 @@ function handleSubmitDrop(){
     }
   });
   // 历史记录不设上限，完整保留
-  state.history.unshift({ time: now, site: '手动录入', items, results });
+    state.history.unshift({ time: now, site: '手动录入', items, results });
   _historyPage = 1;
   saveState();
-  renderHeatmap(); renderBaseProgressRow(); renderPendingDeletions();
-  renderProgress(); renderRecommend(); renderDetail(); renderHistory();
-  renderSevenDayChart(); renderGaps(); renderWeapons();
+  renderPendingDeletions();
+  renderProgress();
+  const activeTab = document.querySelector('.tab.active')?.dataset.tab;
+  if(activeTab === 'main'){ renderHeatmap(); renderBaseProgressRow(); renderRecommend(); }
+  if(activeTab === 'detail') renderDetail();
+  if(activeTab === 'gaps') renderGaps();
+  if(activeTab === 'weapons') renderWeapons();
+  if(activeTab === 'history'){ renderSevenDayChart(); renderHistory(); }
   toast('已提交，新 ' + results.filter(r => r.status === 'new').length + ' 个');
 }
 
@@ -2468,6 +2810,12 @@ function renderSettings(){
   const sprint = document.getElementById('sprintModeToggle');
   if(sprint) sprint.checked = !!state.sprintMode;
 
+  const respectToggle = document.getElementById('respectWeaponDemandToggle');
+  if(respectToggle) respectToggle.checked = !!state.respectWeaponDemand;
+
+  const extraRow = document.getElementById('extraCopiesRow');
+  if(extraRow) extraRow.style.display = state.respectWeaponDemand ? 'flex' : 'none';
+
   const extraInput = document.getElementById('extraCopiesInput');
   if(extraInput) extraInput.value = state.extraCopies || 0;
 
@@ -2491,8 +2839,11 @@ function renderSettings(){
   const ea = document.getElementById('exactAlgoToggle');
   if(ea) ea.checked = !!state.exactAlgo;
 
-  const ts = document.getElementById('themeSelect');
+    const ts = document.getElementById('themeSelect');
   if(ts) ts.value = getStoredTheme();
+
+  const recentDaysInput = document.getElementById('recentHighlightDaysInput');
+  if(recentDaysInput) recentDaysInput.value = state.recentHighlightDays || 0;
 
   const backupHint = document.getElementById('backupHint');
   if(backupHint){
@@ -2527,40 +2878,53 @@ function downloadJSON(obj, filename){
   a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
 }
-function handleExport(){
-  const { weapons, ...rest } = state;
-  downloadJSON(rest, `zmd-matrix-manager-${new Date().toISOString().slice(0,10)}.json`);
+function handleExport(includeHistory){
+  const suffix = includeHistory ? 'full' : 'lite';
+  const filename = `zmd-matrix-${suffix}-${new Date().toISOString().slice(0,10)}.json`;
+  downloadJSON(buildExportPayload(includeHistory), filename);
   localStorage.setItem(STORAGE_KEY + '_last_export', Date.now().toString());
   renderSettings();
   renderProgress();
-  toast('已导出完整数据');
+  toast(includeHistory ? '已导出完整备份（含历史）' : '已导出精简版（不含历史）');
 }
 function handleImport(file){
   const reader = new FileReader();
   reader.onload = () => {
     try{
-      const data = JSON.parse(reader.result);
-      if(!data.data || !data.collected) throw new Error('文件结构不正确');
-      if(!confirm('导入将覆盖当前数据，是否继续？')) return;
+      const payload = JSON.parse(reader.result);
+      if(payload.type !== 'zmd-matrix-manager') throw new Error('不是本工具导出的文件');
+      if(!payload.collected) throw new Error('缺少 collected 字段');
+      const hasHistory = Object.prototype.hasOwnProperty.call(payload, 'history');
+      const msg = hasHistory
+        ? '导入将覆盖当前基质数据、待删除暂存区、刷取历史和设置，是否继续？'
+        : '导入将覆盖当前基质数据、待删除暂存区和设置（历史记录保留），是否继续？';
+      if(!confirm(msg)) return;
       makeSnapshot('导入前');
-      state = data;
-      if(!state.enabledSites) state.enabledSites = {};
-      if(!state.pendingDeletions) state.pendingDeletions = [];
-      if(!state.history) state.history = [];
-      if(typeof state.sprintMode !== 'boolean') state.sprintMode = false;
-      if(typeof state.extraCopies !== 'number') state.extraCopies = 0;
-      if(typeof state.tieBreaker !== 'string') state.tieBreaker = '';
-      if(typeof state.doubleDrop !== 'boolean') state.doubleDrop = false;
-      if(typeof state.exactAlgo !== 'boolean') state.exactAlgo = false;
-      if(!state.collapsedRegions || typeof state.collapsedRegions !== 'object') state.collapsedRegions = {};
-      if(!Array.isArray(state.targets)) state.targets = [];
+
+      state.collected = payload.collected || {};
+      state.pendingDeletions = payload.pendingDeletions || [];
+      if(hasHistory){
+        state.history = payload.history || [];
+        _historyPage = 1;
+      }
+      if(payload.enabledSites) state.enabledSites = payload.enabledSites;
+      if(Array.isArray(payload.targets)) state.targets = payload.targets;
+      if(payload.collapsedRegions && typeof payload.collapsedRegions === 'object') state.collapsedRegions = payload.collapsedRegions;
+      if(typeof payload.sprintMode === 'boolean') state.sprintMode = payload.sprintMode;
+      if(typeof payload.extraCopies === 'number') state.extraCopies = payload.extraCopies;
+      if(typeof payload.respectWeaponDemand === 'boolean') state.respectWeaponDemand = payload.respectWeaponDemand;
+      if(typeof payload.recentHighlightDays === 'number') state.recentHighlightDays = payload.recentHighlightDays;
+      if(typeof payload.tieBreaker === 'string') state.tieBreaker = payload.tieBreaker;
+      if(typeof payload.doubleDrop === 'boolean') state.doubleDrop = payload.doubleDrop;
+      if(typeof payload.exactAlgo === 'boolean') state.exactAlgo = payload.exactAlgo;
+
       state.weapons = deepClone(EXT_WEAPONS);
       if(!state.data) state.data = deepClone(DEFAULT_DATA);
       state.data.regions = deepClone(EXT_REGIONS);
       migrateData(state.data);
       cleanEnabledSites(state);
       migrateNames();
-      _historyPage = 1;
+
       saveState(); renderAll(); toast('导入成功');
     }catch(e){ toast('导入失败：' + e.message); }
   };
@@ -2774,12 +3138,15 @@ function bindEvents(){
     });
   });
 
-  document.getElementById('refreshBtn').addEventListener('click', () => {
+    document.getElementById('refreshBtn').addEventListener('click', () => {
     if(state.exactAlgo){
-      toast('精确算法计算中…');
-      setTimeout(renderRecommend, 30);
+      withLoadingFeedback(
+        document.getElementById('refreshBtn'),
+        document.getElementById('recommendBody'),
+        () => renderRecommend(true)
+      );
     } else {
-      renderRecommend();
+      renderRecommend(true);
     }
   });
   document.getElementById('targetsBtn').addEventListener('click', openTargetsModal);
@@ -2836,13 +3203,13 @@ function bindEvents(){
     catch (err) { toast('复制失败，请手动选择文本'); }
     document.body.removeChild(ta);
   });
-  document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+    document.getElementById('clearHistoryBtn').addEventListener('click', () => {
     if(!state.history || !state.history.length){ toast('已为空'); return; }
-    if(!confirm('清空全部刷取历史？不影响已收集记录。')) return;
+    if(!confirm('清空全部刷取历史？会同时清除热力图的紫色刷取高亮（蓝色/金色修改高亮不受影响）。不影响已收集记录。')) return;
     makeSnapshot('清空历史前');
     state.history = [];
     _historyPage = 1;
-    saveState(); renderHistory(); renderSevenDayChart(); renderProgress(); toast('已清空历史');
+    saveState(); renderHeatmap(); renderHistory(); renderSevenDayChart(); renderProgress(); toast('已清空历史');
   });
   document.getElementById('exportHistoryBtn').addEventListener('click', exportHistory);
   document.getElementById('historyFilter').addEventListener('change', () => {
@@ -2859,7 +3226,8 @@ function bindEvents(){
     renderSettings();
     toast('已创建快照');
   });
-  document.getElementById('exportBtn').addEventListener('click', handleExport);
+  document.getElementById('exportFullBtn').addEventListener('click', () => handleExport(true));
+  document.getElementById('exportLiteBtn').addEventListener('click', () => handleExport(false));
   document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
   document.getElementById('importFile').addEventListener('change', e => {
     const f = e.target.files[0];
@@ -2875,6 +3243,19 @@ function bindEvents(){
     saveState(); renderRecommend();
     toast(state.sprintMode ? '冲刺模式已开启' : '冲刺模式已关闭');
   });
+  const respectToggle = document.getElementById('respectWeaponDemandToggle');
+  if(respectToggle){
+    respectToggle.addEventListener('change', e => {
+      state.respectWeaponDemand = e.target.checked;
+      saveState();
+      renderSettings();
+      renderRecommend();
+      renderGaps();
+      renderWeapons();
+      renderDetail();
+      toast(state.respectWeaponDemand ? '已开启按武器需求保留' : '已关闭，共用基质只需 1 份');
+    });
+  }
   const extraInput = document.getElementById('extraCopiesInput');
   if(extraInput){
     extraInput.addEventListener('change', e => {
@@ -2917,13 +3298,26 @@ function bindEvents(){
       toast(state.exactAlgo ? '精确算法已开启' : '精确算法已关闭');
     });
   }
-  const ts = document.getElementById('themeSelect');
+    const ts = document.getElementById('themeSelect');
   if(ts){
     ts.addEventListener('change', e => {
       const t = e.target.value;
       try { localStorage.setItem('zmd-theme', t); } catch(err){}
       applyTheme(t);
       toast(t === 'light' ? '已切换为浅色' : '已切换为深色');
+    });
+  }
+  const recentDaysInput = document.getElementById('recentHighlightDaysInput');
+  if(recentDaysInput){
+    recentDaysInput.addEventListener('change', e => {
+      let v = parseInt(e.target.value, 10);
+      if(isNaN(v) || v < 0) v = 0;
+      if(v > 30) v = 30;
+      state.recentHighlightDays = v;
+      e.target.value = v;
+      saveState();
+      renderHeatmap();
+      toast(v > 0 ? `近期高亮已设为 ${v} 天` : '近期高亮已关闭');
     });
   }
   document.getElementById('resetSitesBtn').addEventListener('click', () => {
@@ -3008,6 +3402,7 @@ async function bootstrap(){
     if(dc) dc.value = state.doubleDrop ? '6' : '3';
     bindEvents();
     renderAll();
+    _booted = true;
   } catch(e) {
     console.error(e);
     document.body.innerHTML = `
@@ -3025,6 +3420,14 @@ async function bootstrap(){
 }
 
 bootstrap();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(e => {
+      console.warn('Service Worker 注册失败', e);
+    });
+  });
+}
 </script>
 </body>
 </html>

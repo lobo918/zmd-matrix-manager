@@ -63,5 +63,5 @@
   { "id": "w062", "name": "黄金时代", "type": "单手剑", "base": "意志", "add": "治疗效率提升", "skill": "追袭", "owner": "梨诺", "category": "大月卡" },
   { "id": "w063", "name": "寒夜幽影", "type": "单手剑", "base": "敏捷", "add": "攻击提升", "skill": "迸发", "owner": "提弗洛斯", "category": "专武" },
   { "id": "w064", "name": "苦难的尽头", "type": "单手剑", "base": "敏捷", "add": "自然伤害提升", "skill": "迸发", "owner": "提弗洛斯", "category": "大月卡" },
-  { "id": "w064", "name": "点心时刻", "type": "单手剑", "base": "力量", "add": "治疗效率提升", "skill": "医疗", "owner": "噗切娜", "category": "专武" }
+  { "id": "w065", "name": "点心时刻", "type": "单手剑", "base": "力量", "add": "治疗效率提升", "skill": "医疗", "owner": "噗切娜", "category": "专武" }
 ]
