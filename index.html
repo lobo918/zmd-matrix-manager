@@ -151,7 +151,18 @@ details summary::marker{color:var(--accent)}
   .heatmap{min-width:640px}
   .input-area{margin-top:8px;margin-bottom:8px}
 }
-/* 平板不再走独立布局，跟桌面一样按宽度响应 */
+/* ============ 平板布局（单列） ============ */
+html.is-tablet{height:auto;overflow:auto;}
+html.is-tablet body{display:block;min-height:100vh;height:auto;overflow:auto;}
+html.is-tablet .page.active{display:block;flex:none;height:auto;overflow:visible;}
+html.is-tablet #page-main.active{display:block;overflow:visible;padding:8px 12px;}
+html.is-tablet .main-top{display:block;overflow:visible;margin-bottom:8px;}
+html.is-tablet .main-left{margin-bottom:8px;min-height:400px;}
+html.is-tablet .main-right > .card:first-child{max-height:none;}
+html.is-tablet .main-right > .card:last-child{min-height:auto;}
+html.is-tablet .heatmap-wrapper{height:420px;overflow:auto;}
+html.is-tablet .heatmap{min-width:640px;}
+html.is-tablet .input-area{margin-top:8px;margin-bottom:8px;}
 
 /* ============ 手机布局 ============ */
 html.is-phone{height:auto;overflow:auto;}
@@ -3773,6 +3784,8 @@ function applyDeviceClass(){
   root.classList.remove('is-phone', 'is-tablet', 'is-desktop');
   if(type === 'phone' || isNarrow){
     root.classList.add('is-phone');
+  } else if(type === 'tablet'){
+    root.classList.add('is-tablet');
   } else {
     root.classList.add('is-desktop');
   }
