@@ -48,7 +48,8 @@ body{margin:0;height:100vh;height:100dvh;overflow:hidden;display:flex;flex-direc
 [data-theme="light"] ::-webkit-scrollbar-thumb:hover{background:#a8afb8}
 .tabs{display:flex;background:var(--bg);border-bottom:1px solid var(--border);height:44px;flex-shrink:0}
 .tab{flex:1;display:flex;align-items:center;justify-content:center;cursor:pointer;
-  font-weight:600;color:var(--dim);font-size:12.5px;letter-spacing:.5px;transition:color .18s;position:relative;}
+  font-weight:600;color:var(--dim);font-size:12.5px;letter-spacing:.5px;transition:color .18s;position:relative;
+  word-break:keep-all;text-align:center;line-height:1.15;padding:0 8px;}
 .tab:hover{color:var(--text2)}
 .tab.active{color:var(--accent)}
 .tab.active::after{content:'';position:absolute;bottom:-1px;left:20%;right:20%;height:2px;
@@ -110,9 +111,16 @@ details summary{cursor:pointer;font-weight:600;padding:6px 0;user-select:none;fo
 details summary:hover{color:var(--text)}
 details summary::marker{color:var(--accent)}
 
-#page-main.active{display:grid;grid-template-rows:minmax(0,1fr) auto auto;gap:8px;
+#page-main.active{display:grid;grid-template-rows:minmax(340px,1fr) auto auto;gap:8px;
   padding:8px 12px;min-height:0;overflow-y:auto;}
-@media (max-width: 900px), (min-width: 901px) and (max-height: 720px){
+
+/* 桌面端：progressCard 固定高度，ETA 和备份提示绝对定位 */
+#progressCard{position:relative;padding-bottom:26px;}
+#etaHint{position:absolute;left:14px;bottom:9px;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#backupWarn{position:absolute;right:14px;bottom:9px;max-width:38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.main-top{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:8px;min-height:0;overflow:hidden;}
+
+@media (max-width: 1000px){
   html, body{height:auto;overflow:auto}
   body{display:block;min-height:100vh}
   .page.active{display:block;flex:none;height:auto;overflow:visible}
@@ -121,14 +129,116 @@ details summary::marker{color:var(--accent)}
   .main-left{margin-bottom:8px;min-height:350px}
   .main-right > .card:first-child{max-height:none}
   .main-right > .card:last-child{min-height:auto}
-  .heatmap-wrapper{height:350px;overflow:auto}
+  .heatmap-wrapper{height:400px;overflow:auto}
   .heatmap{min-width:640px}
   .input-area{margin-top:8px;margin-bottom:8px}
 }
-.main-top{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:8px;min-height:0;overflow:hidden;}
-@media (max-width: 900px), (min-width: 901px) and (max-height: 720px){.main-top{grid-template-columns:1fr}}
-.main-left,.main-right{display:flex;flex-direction:column;gap:8px;min-height:0}
-.main-left > .card{flex:1;display:flex;flex-direction:column;min-height:0}
+/* 平板不再走独立布局，跟桌面一样按宽度响应 */
+
+/* ============ 手机布局 ============ */
+html.is-phone{height:auto;overflow:auto;}
+html.is-phone body{display:block;min-height:100vh;height:auto;overflow:auto;font-size:13px;}
+html.is-phone .tabs{height:auto;min-height:48px;position:sticky;top:0;z-index:100;background:var(--bg);}
+html.is-phone .tab{font-size:13px;}
+html.is-phone .page.active{display:block;flex:none;height:auto;overflow:visible;}
+
+html.is-phone #progressCard{margin-top:auto;}
+
+html.is-phone #page-main.active{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:10px 12px;
+  overflow:visible;
+  min-height:calc(100vh - 48px);
+  box-sizing:border-box;
+}
+html.is-phone .main-top{display:contents;}
+html.is-phone .main-left{display:contents;}
+html.is-phone .main-right{display:contents;}
+
+/* 顺序：推荐 → 录入 → 待删除 → 进度 */
+html.is-phone #recCard{order:1;max-height:none;}
+html.is-phone #inputArea{order:2;}
+html.is-phone #pendingCard{order:3;min-height:auto;}
+html.is-phone #progressCard{order:4;}
+
+/* 卡片按内容自然高度，禁止 flex 压缩 */
+html.is-phone #recCard,
+html.is-phone #inputArea,
+html.is-phone #pendingCard,
+html.is-phone #progressCard{
+  flex:0 0 auto;
+}
+
+/* 手机端不显示热力图 */
+html.is-phone #heatmapCard{display:none;}
+
+/* 录入区折叠 */
+html.is-phone #inputArea.collapsed #dropForm{display:none;}
+html.is-phone #inputArea.collapsed #submitDrop{display:none;}
+html.is-phone #inputArea.collapsed #clearDropBtn{display:none;}
+
+/* 手机端标题可点、显示箭头、隐藏数量标签 */
+html.is-phone .input-header h3{
+  cursor:pointer;
+  user-select:none;
+  display:flex;
+  align-items:center;
+  gap:5px;
+}
+html.is-phone .input-header .lbl{display:none;}
+html.is-phone #inputArrow{
+  display:inline-block;
+  width:0;
+  height:0;
+  border-top:4px solid transparent;
+  border-bottom:4px solid transparent;
+  border-left:6px solid var(--dim);
+  transition:transform .18s;
+  transform-origin:50% 50%;
+  flex-shrink:0;
+}
+html.is-phone #inputArrow::before{content:none;}
+html.is-phone #inputArea:not(.collapsed) #inputArrow{transform:rotate(90deg);}
+
+/* 触摸友好 */
+html.is-phone button{padding:8px 14px;font-size:12.5px;}
+html.is-phone button.small{padding:5px 10px;font-size:11.5px;}
+html.is-phone select,
+html.is-phone input[type=text],
+html.is-phone input[type=number]{padding:7px 10px;font-size:13px;}
+html.is-phone .input-matrix{grid-template-columns:1fr;}
+
+/* 手机端字号放大 */
+html.is-phone .card h3{font-size:13px;}
+html.is-phone .input-header h3{font-size:13px !important;}
+html.is-phone .rec-region{font-size:12px;}
+html.is-phone .rec-site{font-size:15.5px;margin-bottom:7px;}
+html.is-phone .rec-lock-row{font-size:12.5px;margin-bottom:4px;}
+html.is-phone .rec-lock-key{font-size:11.5px;min-width:52px;}
+html.is-phone .rec-lock-val{font-size:13px;}
+html.is-phone .rec-stats{font-size:12px;line-height:1.6;padding:7px 10px;}
+html.is-phone .rec-adopt{font-size:13px;padding:10px;}
+html.is-phone .hint{font-size:12px;}
+
+/* 手机端全局进度卡片紧凑化 */
+html.is-phone #progressCard{padding:10px 12px;}
+html.is-phone #progressCard #baseProgressRow{display:none !important;}
+html.is-phone #progressCard #etaHint{display:none;}
+html.is-phone #progressCard .progress-bar{margin:4px 0 0;}
+html.is-phone #backupWarn{position:static;max-width:none;white-space:normal;}
+
+html.is-phone .matrix-item .matrix-line{grid-template-columns:2fr 1fr;}
+
+/* ============ 紧凑热力图 ============ */
+.heatmap.compact{min-width:0;grid-template-columns:52px repeat(14, minmax(18px, 1fr));}
+.heatmap.compact .hm-cell{height:18px;}
+.heatmap.compact .hm-sq{width:10px;height:10px;border-radius:2px;}
+.heatmap.compact .hm-sq.master,
+.heatmap.compact .hm-sq.recent-master{width:11px;height:11px;border-radius:50%;}
+.main-left,.main-right{display:flex;flex-direction:column;gap:8px;min-height:0;min-width:0}
+.main-left > .card{flex:1;display:flex;flex-direction:column;min-height:0;min-width:0}
 .main-right > .card:first-child{flex:0 0 auto;display:flex;flex-direction:column;max-height:230px;padding:9px 11px;overflow:hidden;}
 .main-right > .card:first-child h3{margin:0 0 6px;flex-shrink:0}
 .rec-body{flex:1 1 auto;overflow-y:auto;min-height:0;line-height:1.4;position:relative}
@@ -154,9 +264,9 @@ button.secondary:disabled:hover{background:var(--card3)}
 .celebration-stat .lbl{color:var(--dim);font-size:11px;letter-spacing:.3px;}
 .celebration-meta{font-size:11px;color:var(--dim);line-height:1.8;margin-top:10px;letter-spacing:.3px;}
 .main-right > .card:first-child .rec-adopt{flex-shrink:0;margin-top:6px}
-.main-right > .card:last-child{flex:1 1 0;display:flex;flex-direction:column;min-height:120px;padding:9px 11px;overflow:hidden;}
+.main-right > .card:last-child{flex:1 1 0;display:flex;flex-direction:column;min-height:100px;padding:9px 11px;overflow:hidden;}
 .main-right > .card:last-child .pending-list{flex:1;overflow-y:auto;min-height:0}
-.heatmap-wrapper{flex:1;overflow:auto;padding:4px 0 2px;min-height:0;position:relative}
+.heatmap-wrapper{flex:1;overflow:auto;padding:4px 0 2px;min-height:0;min-width:0;position:relative}
 .heatmap{display:grid;grid-template-columns:52px repeat(14, minmax(22px, 1fr));gap:2px;width:100%;padding-top:4px;}
 .hm-col-header{font-size:10.5px;color:var(--text2);font-weight:600;display:flex;align-items:flex-end;justify-content:center;padding-bottom:5px;height:22px;letter-spacing:.3px;}
 .hm-row-header{font-size:10.5px;color:var(--text2);font-weight:500;display:flex;align-items:center;justify-content:flex-end;padding-right:7px;height:20px;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -207,7 +317,7 @@ button.secondary:disabled:hover{background:var(--card3)}
 .input-header h3{margin:0 !important;font-size:11px !important;text-transform:uppercase;color:var(--text2);letter-spacing:.6px}
 .input-header .controls{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
 .input-header .ctrl-item{min-width:110px}
-.input-matrix{display:grid;grid-template-columns:repeat(6, minmax(0, 1fr));gap:8px}
+.input-matrix{display:grid;grid-template-columns:repeat(auto-fit, minmax(0, 1fr));gap:8px}
 @media (max-width:1000px){ .input-matrix{grid-template-columns:repeat(3, 1fr)} }
 @media (max-width:600px){ .input-matrix{grid-template-columns:repeat(2, 1fr)} }
 .matrix-item{background:var(--card2);border-radius:var(--radius);padding:7px 8px;border:1px solid var(--border);transition:background .2s, border-color .2s, box-shadow .2s;}
@@ -391,17 +501,17 @@ button.secondary:disabled:hover{background:var(--card3)}
 
 <div class="tabs">
   <div class="tab active" data-tab="main">主界面</div>
-  <div class="tab" data-tab="weapons">武器图鉴</div>
-  <div class="tab" data-tab="detail">详细清单</div>
-  <div class="tab" data-tab="gaps">缺口清单</div>
-  <div class="tab" data-tab="history">刷取历史</div>
+  <div class="tab" data-tab="weapons">武器<wbr>图鉴</div>
+  <div class="tab" data-tab="detail">详细<wbr>清单</div>
+  <div class="tab" data-tab="gaps">缺口<wbr>清单</div>
+  <div class="tab" data-tab="history">刷取<wbr>历史</div>
   <div class="tab" data-tab="settings">设置</div>
 </div>
 
 <div id="page-main" class="page active">
   <div class="main-top">
     <div class="main-left">
-      <div class="card">
+      <div class="card" id="heatmapCard">
         <h3><span>收集进度</span><span class="pill" id="progressPill">0 / 840</span></h3>
         <div class="heatmap-wrapper"><div id="heatmap" class="heatmap"></div></div>
       </div>
@@ -418,7 +528,7 @@ button.secondary:disabled:hover{background:var(--card3)}
         <div id="recommendBody" class="rec-body">计算中…</div>
         <button class="rec-adopt small" id="adoptRecBtn" style="display:none">采纳（预填并锁定字段）</button>
       </div>
-      <div class="card">
+      <div class="card" id="pendingCard">
         <h3>
           <span>待删除暂存区</span>
           <span>
@@ -431,9 +541,9 @@ button.secondary:disabled:hover{background:var(--card3)}
     </div>
   </div>
 
-  <div class="input-area">
+  <div class="input-area" id="inputArea">
     <div class="input-header">
-      <h3>本次掉落录入 <span id="lockPill" class="pill lock-pill" style="display:none"></span></h3>
+      <h3 id="inputToggle"><span id="inputArrow" class="input-arrow"></span>本次掉落录入 <span id="lockPill" class="pill lock-pill" style="display:none"></span></h3>
       <div class="controls">
         <div class="ctrl-item">
           <label class="lbl">数量</label>
@@ -449,15 +559,15 @@ button.secondary:disabled:hover{background:var(--card3)}
     <div id="dropForm" class="input-matrix"></div>
   </div>
 
-  <div class="card" style="flex-shrink:0">
+  <div class="card" id="progressCard">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
       <span style="font-size:11px;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;font-weight:600">全局进度 <span id="sprintPill" class="pill warn" style="display:none;margin-left:4px">⚡ 冲刺</span></span>
       <span style="font-size:12px"><b id="collectedCount" style="color:var(--accent);font-size:14px">0</b> <span style="color:var(--dim)">/</span> <span id="totalCount" style="color:var(--text2)">840</span></span>
     </div>
     <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
     <div id="baseProgressRow" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;font-size:10.5px;color:var(--dim)"></div>
-    <div class="hint" id="etaHint" style="margin-top:4px;font-size:10.5px;color:var(--dim2)"></div>
-    <div class="hint" id="backupWarn" style="margin-top:4px;font-size:10.5px;color:var(--warn);display:none"></div>
+    <div class="hint" id="etaHint" style="font-size:10.5px;color:var(--dim2)"></div>
+    <div class="hint" id="backupWarn" style="font-size:10.5px;color:var(--warn);display:none"></div>
   </div>
 </div>
 
@@ -1313,13 +1423,27 @@ function showTooltip(e, html){
 }
 function hideTooltip(){ tooltipEl.style.display = 'none'; }
 
+const SQ_PRIORITY = {
+  'recent-master': 7,
+  'master': 6,
+  'recent-edit': 5,
+  'recent-fetch': 4,
+  'high': 3,
+  'mid': 2,
+  'low': 1,
+  '': 0
+};
+
 function renderHeatmap(){
+  if(document.documentElement.classList.contains('is-phone')) return;
+  const isCompact = window.innerWidth < COMPACT_HEATMAP_WIDTH;
   const hm = document.getElementById('heatmap');
   const skills = state.data.allSkillAttrs;
   const adds = state.data.allAddAttrs;
   _recentFetchKeys = buildRecentFetchKeys(state.recentHighlightDays);
   _recentEditKeys = buildRecentEditKeys(state.recentHighlightDays);
   hm.innerHTML = '';
+  hm.classList.toggle('compact', isCompact);
   const corner = document.createElement('div');
   hm.appendChild(corner);
   skills.forEach(s => {
@@ -1339,22 +1463,46 @@ function renderHeatmap(){
       cell.className = 'hm-cell';
       const lines = [];
       let collectedCount = 0;
-      state.data.baseAttrs.forEach(base => {
-        const key = makeKey(base, add, skill);
-        const arr = getCollectedArr(key);
+
+      if(isCompact){
+        let bestCls = '';
+        state.data.baseAttrs.forEach(base => {
+          const key = makeKey(base, add, skill);
+          const arr = getCollectedArr(key);
+          const cls = bestSqClass(key);
+          if(SQ_PRIORITY[cls] > SQ_PRIORITY[bestCls]) bestCls = cls;
+          if(arr.length){
+            collectedCount++;
+            const best = getBestItem(key);
+            const suffix = arr.length > 1 ? ` ×${arr.length}` : '';
+            let recentMark = '';
+            if(_recentEditKeys && _recentEditKeys.has(key)) recentMark = ' ✎';
+            else if(_recentFetchKeys && _recentFetchKeys.has(key)) recentMark = ' ★';
+            lines.push(`${base}(${best.baseLv}/${best.addLv}/${best.skillLv})${suffix}${recentMark}`);
+          }
+        });
         const sq = document.createElement('span');
-        sq.className = 'hm-sq ' + bestSqClass(key);
+        sq.className = 'hm-sq ' + bestCls;
         cell.appendChild(sq);
-        if(arr.length){
-          collectedCount++;
-          const best = getBestItem(key);
-          const suffix = arr.length > 1 ? ` ×${arr.length}` : '';
-          let recentMark = '';
-          if(_recentEditKeys && _recentEditKeys.has(key)) recentMark = ' ✎';
-          else if(_recentFetchKeys && _recentFetchKeys.has(key)) recentMark = ' ★';
-          lines.push(`${base}(${best.baseLv}/${best.addLv}/${best.skillLv})${suffix}${recentMark}`);
-        }
-      });
+      } else {
+        state.data.baseAttrs.forEach(base => {
+          const key = makeKey(base, add, skill);
+          const arr = getCollectedArr(key);
+          const sq = document.createElement('span');
+          sq.className = 'hm-sq ' + bestSqClass(key);
+          cell.appendChild(sq);
+          if(arr.length){
+            collectedCount++;
+            const best = getBestItem(key);
+            const suffix = arr.length > 1 ? ` ×${arr.length}` : '';
+            let recentMark = '';
+            if(_recentEditKeys && _recentEditKeys.has(key)) recentMark = ' ✎';
+            else if(_recentFetchKeys && _recentFetchKeys.has(key)) recentMark = ' ★';
+            lines.push(`${base}(${best.baseLv}/${best.addLv}/${best.skillLv})${suffix}${recentMark}`);
+          }
+        });
+      }
+
       const html = `<b>${toShortAdd(add)} + ${skill}</b>\n` +
                    `已收集 ${collectedCount}/5\n` +
                    (lines.length ? lines.join('，') : '<span style="color:var(--dim)">暂无记录</span>');
@@ -1760,6 +1908,7 @@ function adoptRecommendation(rec){
     lockValue: rec.lockValue
   };
   renderDropForm();
+  setInputCollapsed(false);
   toast('已应用推荐方案，锁定字段不可更改');
 }
 
@@ -2937,6 +3086,7 @@ function handleSubmitDrop(){
   if(activeTab === 'gaps') renderGaps();
   if(activeTab === 'weapons') renderWeapons();
   if(activeTab === 'history'){ renderSevenDayChart(); renderHistory(); }
+  if(document.documentElement.classList.contains('is-phone')) setInputCollapsed(true);
   toast('已提交，新 ' + results.filter(r => r.status === 'new').length + ' 个');
 }
 
@@ -3360,6 +3510,11 @@ function bindEvents(){
   document.getElementById('celebrationModal').addEventListener('click', e => {
     if(e.target.id === 'celebrationModal') e.currentTarget.classList.remove('show');
   });
+   document.getElementById('inputToggle').addEventListener('click', () => {
+    if(!document.documentElement.classList.contains('is-phone')) return;
+    const area = document.getElementById('inputArea');
+    setInputCollapsed(!area.classList.contains('collapsed'));
+  });
   document.getElementById('dropCount').addEventListener('change', renderDropForm);
   document.getElementById('submitDrop').addEventListener('click', handleSubmitDrop);
   document.getElementById('adoptRecBtn').addEventListener('click', () => {
@@ -3573,6 +3728,50 @@ function bindEvents(){
 }
 
 /* ============================================================
+ *  设备识别
+ * ============================================================ */
+function detectDeviceType(){
+  const ua = navigator.userAgent || '';
+  const isIPad = /iPad/.test(ua) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if(isIPad) return 'tablet';
+  const isPhone = /iPhone|iPod|Android.*Mobile|Windows Phone|BlackBerry|IEMobile|Opera Mini/.test(ua);
+  if(isPhone) return 'phone';
+  const isTablet = /Android(?!.*Mobile)|Tablet|PlayBook|Silk/.test(ua);
+  if(isTablet) return 'tablet';
+  return 'desktop';
+}
+
+const NARROW_THRESHOLD = 500;
+const COMPACT_HEATMAP_WIDTH = 720;
+
+function applyDeviceClass(){
+  const type = detectDeviceType();
+  const root = document.documentElement;
+  const isNarrow = window.innerWidth < NARROW_THRESHOLD;
+  root.classList.remove('is-phone', 'is-tablet', 'is-desktop');
+  if(type === 'phone' || isNarrow){
+    root.classList.add('is-phone');
+  } else {
+    root.classList.add('is-desktop');
+  }
+}
+
+/* ============================================================
+ *  手机端录入区折叠
+ * ============================================================ */
+function setInputCollapsed(collapsed){
+  const area = document.getElementById('inputArea');
+  if(!area) return;
+  area.classList.toggle('collapsed', collapsed);
+}
+
+function initInputCollapse(){
+  const isPhone = document.documentElement.classList.contains('is-phone');
+  setInputCollapsed(isPhone);
+}
+
+/* ============================================================
  *  启动
  * ============================================================ */
 async function bootstrap(){
@@ -3597,8 +3796,32 @@ async function bootstrap(){
     applyTheme(getStoredTheme());
     const dc = document.getElementById('dropCount');
     if(dc) dc.value = state.doubleDrop ? '6' : '3';
+    applyDeviceClass();
     bindEvents();
     renderAll();
+    initInputCollapse();
+
+    let _lastIsPhone = document.documentElement.classList.contains('is-phone');
+    let _lastCompact = !_lastIsPhone && window.innerWidth < COMPACT_HEATMAP_WIDTH;
+    let _deviceClassTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(_deviceClassTimer);
+      _deviceClassTimer = setTimeout(() => {
+        applyDeviceClass();
+        const isPhone = document.documentElement.classList.contains('is-phone');
+        const isCompact = !isPhone && window.innerWidth < COMPACT_HEATMAP_WIDTH;
+        if(isPhone !== _lastIsPhone){
+          renderHeatmap();
+          if(isPhone) setInputCollapsed(true);
+          _lastIsPhone = isPhone;
+          _lastCompact = isCompact;
+        } else if(isCompact !== _lastCompact){
+          renderHeatmap();
+          _lastCompact = isCompact;
+        }
+      }, 120);
+    });
+
     _booted = true;
   } catch(e) {
     console.error(e);
