@@ -149,7 +149,7 @@ button.secondary:disabled:hover{background:var(--card3)}
 .main-right > .card:last-child{flex:1 1 0;display:flex;flex-direction:column;min-height:120px;padding:9px 11px;overflow:hidden;}
 .main-right > .card:last-child .pending-list{flex:1;overflow-y:auto;min-height:0}
 .heatmap-wrapper{flex:1;overflow:auto;padding:4px 0 2px;min-height:0;position:relative}
-.heatmap{display:grid;grid-template-columns:80px repeat(14, minmax(22px, 1fr));gap:2px;width:100%;padding-top:4px;}
+.heatmap{display:grid;grid-template-columns:52px repeat(14, minmax(22px, 1fr));gap:2px;width:100%;padding-top:4px;}
 .hm-col-header{font-size:10.5px;color:var(--text2);font-weight:600;display:flex;align-items:flex-end;justify-content:center;padding-bottom:5px;height:22px;letter-spacing:.3px;}
 .hm-row-header{font-size:10.5px;color:var(--text2);font-weight:500;display:flex;align-items:center;justify-content:flex-end;padding-right:7px;height:20px;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .hm-cell{height:20px;display:flex;align-items:center;justify-content:center;gap:2px;cursor:pointer;border-radius:3px;transition:background .15s;position:relative}
@@ -697,7 +697,6 @@ const DEFAULT_DATA = {
     '寒冷伤害提升', '源石技艺提升', '治疗效率提升', '终结技充能效率提升'
   ],
   addAliases: {
-    '终结技效率提升': '终结技充能效率提升',
     '攻击': '攻击提升', '生命': '生命提升', '暴击': '暴击率提升',
     '物理': '物理伤害提升', '灼热': '灼热伤害提升', '法术': '法术伤害提升',
     '自然': '自然伤害提升', '电磁': '电磁伤害提升', '寒冷': '寒冷伤害提升',
@@ -764,7 +763,7 @@ function migrateData(d){
   if(d.baseAttrs && d.baseAttrs.length === 5 && NEW_BASE_ORDER.every(b => d.baseAttrs.includes(b))){
     d.baseAttrs = NEW_BASE_ORDER.slice();
   }
-  if(!d.addAliases) d.addAliases = DEFAULT_DATA.addAliases;
+  d.addAliases = deepClone(DEFAULT_DATA.addAliases);
   return d;
 }
 function cleanEnabledSites(s){
