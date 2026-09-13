@@ -96,7 +96,10 @@ select:disabled{opacity:.55;cursor:not-allowed;background:#1a1d22;color:var(--di
 .progress-bar{height:5px;background:#232830;border-radius:3px;overflow:hidden;margin:6px 0}
 [data-theme="light"] .progress-bar{background:#e5e9ef}
 .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#7ab8ff);
-  border-radius:3px;transition:width .4s ease;box-shadow:0 0 8px rgba(91,163,255,.4);}
+  border-radius:3px;transition:width .4s ease, background .3s ease, box-shadow .3s ease;box-shadow:0 0 8px rgba(91,163,255,.4);}
+.progress-fill.sprint{background:linear-gradient(90deg,#e6b95c,#ff9f43);box-shadow:0 0 12px rgba(230,185,92,.6);}
+
+[data-theme="light"] .progress-fill.sprint{background:linear-gradient(90deg,#c9973a,#e67e22);}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
   background:#2a2f38;color:var(--text);padding:9px 18px;border-radius:8px;
   font-size:12px;z-index:500;opacity:0;transition:opacity .25s, transform .25s;
@@ -145,6 +148,11 @@ details summary::marker{color:var(--accent)}
 button:disabled{opacity:.55;cursor:not-allowed}
 button:disabled:hover{background:var(--accent)}
 button.secondary:disabled:hover{background:var(--card3)}
+.celebration-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;padding:14px 4px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+.celebration-stat{display:flex;align-items:baseline;gap:7px;justify-content:center;font-size:12px;}
+.celebration-stat .num{font-size:19px;font-weight:700;color:var(--accent);letter-spacing:.5px;font-family:ui-monospace,Menlo,Consolas,monospace;}
+.celebration-stat .lbl{color:var(--dim);font-size:11px;letter-spacing:.3px;}
+.celebration-meta{font-size:11px;color:var(--dim);line-height:1.8;margin-top:10px;letter-spacing:.3px;}
 .main-right > .card:first-child .rec-adopt{flex-shrink:0;margin-top:6px}
 .main-right > .card:last-child{flex:1 1 0;display:flex;flex-direction:column;min-height:120px;padding:9px 11px;overflow:hidden;}
 .main-right > .card:last-child .pending-list{flex:1;overflow-y:auto;min-height:0}
@@ -443,7 +451,7 @@ button.secondary:disabled:hover{background:var(--card3)}
 
   <div class="card" style="flex-shrink:0">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
-      <span style="font-size:11px;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;font-weight:600">全局进度</span>
+      <span style="font-size:11px;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;font-weight:600">全局进度 <span id="sprintPill" class="pill warn" style="display:none;margin-left:4px">⚡ 冲刺</span></span>
       <span style="font-size:12px"><b id="collectedCount" style="color:var(--accent);font-size:14px">0</b> <span style="color:var(--dim)">/</span> <span id="totalCount" style="color:var(--text2)">840</span></span>
     </div>
     <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
@@ -679,6 +687,17 @@ button.secondary:disabled:hover{background:var(--card3)}
       <button id="targetsCancelBtn" class="secondary">取消</button>
       <button id="targetsSaveBtn">保存</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="celebrationModal">
+  <div class="modal-box" style="text-align:center;max-width:520px">
+    <div style="font-size:56px;line-height:1;margin-bottom:8px">🎉</div>
+    <h3 style="font-size:22px;color:var(--gold);margin-bottom:6px;letter-spacing:1px">全收集达成！</h3>
+    <div id="celebrationSubtitle" style="font-size:12px;color:var(--dim);margin-bottom:14px"></div>
+    <div id="celebrationStats"></div>
+    <div id="celebrationFooter" style="font-size:13px;color:var(--text2);line-height:1.9;margin:16px 0 20px"></div>
+    <button id="celebrationCloseBtn" style="font-size:13px;padding:8px 24px">知道了</button>
   </div>
 </div>
 
@@ -1916,6 +1935,160 @@ function updateEtaHint(){
   etaEl.innerHTML = `分段模拟预计还需约 <b>${est.drops}</b> 次提交。${warnStr}`;
 }
 
+const CELEBRATED_KEY = STORAGE_KEY + '_celebrated';
+
+function buildCelebrationStats(){
+  const history = state.history || [];
+  const collected = state.collected || {};
+
+  let totalItems = 0;
+  let totalNew = 0;
+  let totalReplace = 0;
+  let firstTime = null;
+  const dayMap = {};
+
+  for(const h of history){
+    if(!h) continue;
+    if(!firstTime || h.time < firstTime) firstTime = h.time;
+    const items = h.items || [];
+    totalItems += items.length;
+    const results = h.results || [];
+    for(const r of results){
+      if(r.status === 'new') totalNew++;
+      else if(r.status === 'dup' && r.keep) totalReplace++;
+    }
+    const d = new Date(h.time);
+    const dayKey = d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+    dayMap[dayKey] = (dayMap[dayKey] || 0) + 1;
+  }
+
+  let totalCopies = 0;
+  let multiCopyKeys = 0;
+  for(const k in collected){
+    const arr = collected[k];
+    if(Array.isArray(arr) && arr.length){
+      totalCopies += arr.length;
+      if(arr.length > 1) multiCopyKeys++;
+    }
+  }
+
+  const dayKeys = Object.keys(dayMap).sort();
+  const activeDays = dayKeys.length;
+  let longestStreak = 0;
+  let currentStreak = 0;
+  let prevTs = null;
+  for(const dk of dayKeys){
+    const [y, m, d] = dk.split('-').map(Number);
+    const ts = new Date(y, m - 1, d).getTime();
+    if(prevTs !== null && ts - prevTs === 86400000) currentStreak++;
+    else currentStreak = 1;
+    if(currentStreak > longestStreak) longestStreak = currentStreak;
+    prevTs = ts;
+  }
+
+  let maxDay = null;
+  let maxDayCount = 0;
+  for(const dk in dayMap){
+    if(dayMap[dk] > maxDayCount){
+      maxDayCount = dayMap[dk];
+      maxDay = dk;
+    }
+  }
+
+  const days = firstTime ? Math.max(1, Math.ceil((Date.now() - firstTime) / 86400000)) : 0;
+
+  return {
+    hasHistory: history.length > 0,
+    totalSubmits: history.length,
+    totalItems,
+    totalNew,
+    totalReplace,
+    totalCopies,
+    multiCopyKeys,
+    activeDays,
+    longestStreak,
+    maxDay,
+    maxDayCount,
+    firstTime,
+    days
+  };
+}
+
+const CELEBRATION_POEM = '开始的第一改变了一切。<br>随之的第二承认了无数。<br>然后结束的第五个，则早已失去了意义。';
+
+function renderCelebration(){
+  const subEl = document.getElementById('celebrationSubtitle');
+  const statsEl = document.getElementById('celebrationStats');
+  const footEl = document.getElementById('celebrationFooter');
+  if(!subEl || !statsEl || !footEl) return;
+
+  const s = buildCelebrationStats();
+
+  if(!s.hasHistory){
+    subEl.textContent = '';
+    statsEl.innerHTML = '';
+    footEl.innerHTML = CELEBRATION_POEM;
+    return;
+  }
+
+  const pad = n => String(n).padStart(2, '0');
+  const fmtDate = ts => {
+    const d = new Date(ts);
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  };
+  const fmtShortDate = dk => {
+    const parts = dk.split('-');
+    return parts[1] + '-' + parts[2];
+  };
+
+  subEl.textContent = '从 ' + fmtDate(s.firstTime) + ' 到今天，历时 ' + s.days + ' 天';
+
+  const items = [
+    { n: s.totalSubmits, l: '次提交' },
+    { n: s.totalItems, l: '个基质' },
+    { n: s.totalNew, l: '个新组合' },
+    { n: s.totalReplace, l: '次替换' },
+    { n: s.totalCopies, l: '份收藏' },
+    { n: s.multiCopyKeys, l: '个多份组合' }
+  ];
+
+  const statsHtml = items.map(it =>
+    '<div class="celebration-stat"><span class="num">' + it.n + '</span><span class="lbl">' + it.l + '</span></div>'
+  ).join('');
+
+  const metaHtml = '活跃 ' + s.activeDays + ' 天 · 最长连续 ' + s.longestStreak +
+    ' 天 · 最肝 ' + s.maxDayCount + ' 次（' + fmtShortDate(s.maxDay) + '）';
+
+  statsEl.innerHTML = '<div class="celebration-stats">' + statsHtml + '</div>' +
+    '<div class="celebration-meta">' + metaHtml + '</div>';
+
+  footEl.innerHTML = CELEBRATION_POEM;
+}
+
+function hasCelebrated(){
+  try { return localStorage.getItem(CELEBRATED_KEY) === '1'; } catch(e){ return false; }
+}
+function setCelebrated(v){
+  try {
+    if(v) localStorage.setItem(CELEBRATED_KEY, '1');
+    else localStorage.removeItem(CELEBRATED_KEY);
+  } catch(e){}
+}
+function checkCelebration(count, total){
+  if(count < total){
+    if(hasCelebrated()) setCelebrated(false);
+    return;
+  }
+  if(!_booted) return;
+  if(hasCelebrated()) return;
+  setCelebrated(true);
+  renderCelebration();
+  const m = document.getElementById('celebrationModal');
+  if(m) m.classList.add('show');
+}
+
 function renderProgress(){
   let count = 0;
   for(const k in state.collected){
@@ -1926,6 +2099,24 @@ function renderProgress(){
   document.getElementById('totalCount').textContent = total;
   document.getElementById('progressFill').style.width = (count / total * 100).toFixed(2) + '%';
   document.getElementById('progressPill').textContent = `${count} / ${total}`;
+
+  // 冲刺模式视觉反馈
+  const progress = count / total;
+  const sprintOn = state.sprintMode || progress > 0.85;
+  const fill = document.getElementById('progressFill');
+  if(fill) fill.classList.toggle('sprint', sprintOn);
+  const sprintPill = document.getElementById('sprintPill');
+  if(sprintPill){
+    if(sprintOn){
+      sprintPill.style.display = 'inline-block';
+      sprintPill.textContent = state.sprintMode ? '⚡ 冲刺' : '⚡ 冲刺（85%+）';
+    } else {
+      sprintPill.style.display = 'none';
+    }
+  }
+
+  // 全收集庆祝
+  checkCelebration(count, total);
 
   scheduleEtaUpdate();
 
@@ -3163,6 +3354,12 @@ function bindEvents(){
   document.getElementById('targetsModal').addEventListener('click', e => {
     if(e.target.id === 'targetsModal') closeTargetsModal();
   });
+  document.getElementById('celebrationCloseBtn').addEventListener('click', () => {
+    document.getElementById('celebrationModal').classList.remove('show');
+  });
+  document.getElementById('celebrationModal').addEventListener('click', e => {
+    if(e.target.id === 'celebrationModal') e.currentTarget.classList.remove('show');
+  });
   document.getElementById('dropCount').addEventListener('change', renderDropForm);
   document.getElementById('submitDrop').addEventListener('click', handleSubmitDrop);
   document.getElementById('adoptRecBtn').addEventListener('click', () => {
@@ -3371,6 +3568,7 @@ function bindEvents(){
     if(e.key !== 'Escape') return;
     if(document.getElementById('editModal').classList.contains('show')) closeEditModal();
     if(document.getElementById('targetsModal').classList.contains('show')) closeTargetsModal();
+    if(document.getElementById('celebrationModal').classList.contains('show')) document.getElementById('celebrationModal').classList.remove('show');
   });
 }
 
