@@ -13,10 +13,23 @@
 <link rel="icon" type="image/png" href="./icon-192.png">
 <script>
 (function(){
+  // 主题（首屏防闪烁）
   try {
     if(localStorage.getItem('zmd-theme') === 'light'){
       document.documentElement.setAttribute('data-theme','light');
     }
+  } catch(e){}
+  // 设备识别（首屏防闪烁，必须在渲染前执行）
+  try {
+    var ua = navigator.userAgent || '';
+    var isIPad = /iPad/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    var isPhone = /iPhone|iPod|Android.*Mobile|Windows Phone|BlackBerry|IEMobile|Opera Mini/.test(ua);
+    var isTablet = isIPad || /Android(?!.*Mobile)|Tablet|PlayBook|Silk/.test(ua);
+    var narrow = window.innerWidth < 500;
+    var root = document.documentElement;
+    if(isPhone || narrow) root.classList.add('is-phone');
+    else if(isTablet) root.classList.add('is-tablet');
+    else root.classList.add('is-desktop');
   } catch(e){}
 })();
 </script>
@@ -27,12 +40,14 @@
   --dim:#7c838d;--dim2:#5a6068;--accent:#5ba3ff;--accent-dim:#2c5f9c;
   --ok:#5ccf6d;--bad:#f05545;--warn:#e6b95c;--gold:#e0b060;
   --radius-lg:12px;--radius:8px;--radius-sm:5px;
+  color-scheme:dark;
 }
 [data-theme="light"]{
   --bg:#f4f6f9;--card:#ffffff;--card2:#f1f4f8;--card3:#e5e9ef;
   --border:#dde1e8;--border2:#c8cdd5;--text:#1a1d23;--text2:#4a5159;
   --dim:#7c838d;--dim2:#9aa1ab;--accent:#3b7ed8;--accent-dim:#a9c8ec;
   --ok:#3fa650;--bad:#d63a2c;--warn:#c9973a;--gold:#b08830;
+  color-scheme:light;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{margin:0;height:100%;overflow:hidden}
@@ -99,7 +114,6 @@ select:disabled{opacity:.55;cursor:not-allowed;background:#1a1d22;color:var(--di
 .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#7ab8ff);
   border-radius:3px;transition:width .4s ease, background .3s ease, box-shadow .3s ease;box-shadow:0 0 8px rgba(91,163,255,.4);}
 .progress-fill.sprint{background:linear-gradient(90deg,#e6b95c,#ff9f43);box-shadow:0 0 12px rgba(230,185,92,.6);}
-
 [data-theme="light"] .progress-fill.sprint{background:linear-gradient(90deg,#c9973a,#e67e22);}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
   background:#2a2f38;color:var(--text);padding:9px 18px;border-radius:8px;
@@ -114,28 +128,9 @@ details summary::marker{color:var(--accent)}
 #page-main.active{display:grid;grid-template-rows:minmax(340px,1fr) auto auto;gap:8px;
   padding:8px 12px;min-height:0;overflow-y:auto;}
 
-/* 底部信息行：ETA 靠左，备份提示靠右，高度稳定 */
-.progress-foot{
-  display:flex;
-  justify-content:space-between;
-  align-items:baseline;
-  gap:12px;
-  margin-top:4px;
-  min-height:1.5em;
-}
-#etaHint{
-  font-size:10.5px;
-  color:var(--dim2);
-  flex:1;
-  min-width:0;
-}
-#backupWarn{
-  font-size:10.5px;
-  color:var(--warn);
-  text-align:right;
-  flex-shrink:0;
-  display:none;
-}
+.progress-foot{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:4px;min-height:1.5em;}
+#etaHint{font-size:10.5px;color:var(--dim2);flex:1;min-width:0;}
+#backupWarn{font-size:10.5px;color:var(--warn);text-align:right;flex-shrink:0;display:none;}
 .main-top{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:8px;min-height:0;overflow:hidden;}
 
 @media (max-width: 1000px){
@@ -151,7 +146,6 @@ details summary::marker{color:var(--accent)}
   .heatmap{min-width:640px}
   .input-area{margin-top:8px;margin-bottom:8px}
 }
-/* ============ 平板布局（单列） ============ */
 html.is-tablet{height:auto;overflow:auto;}
 html.is-tablet body{display:block;min-height:100vh;height:auto;overflow:auto;}
 html.is-tablet .page.active{display:block;flex:none;height:auto;overflow:visible;}
@@ -164,82 +158,47 @@ html.is-tablet .heatmap-wrapper{height:420px;overflow:auto;}
 html.is-tablet .heatmap{min-width:640px;}
 html.is-tablet .input-area{margin-top:8px;margin-bottom:8px;}
 
-/* ============ 手机布局 ============ */
 html.is-phone{height:auto;overflow:auto;}
 html.is-phone body{display:block;min-height:100vh;height:auto;overflow:auto;font-size:13px;}
 html.is-phone .tabs{height:auto;min-height:48px;position:sticky;top:0;z-index:100;background:var(--bg);}
 html.is-phone .tab{font-size:13px;}
 html.is-phone .page.active{display:block;flex:none;height:auto;overflow:visible;}
-
 html.is-phone #progressCard{margin-top:auto;}
-
 html.is-phone #page-main.active{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  padding:10px 12px;
-  overflow:visible;
-  min-height:calc(100vh - 48px);
-  box-sizing:border-box;
+  display:flex;flex-direction:column;gap:10px;padding:10px 12px;overflow:visible;
+  min-height:calc(100vh - 48px);box-sizing:border-box;
 }
 html.is-phone .main-top{display:contents;}
 html.is-phone .main-left{display:contents;}
 html.is-phone .main-right{display:contents;}
-
-/* 顺序：推荐 → 录入 → 待删除 → 进度 */
 html.is-phone #recCard{order:1;max-height:none;}
 html.is-phone #inputArea{order:2;}
 html.is-phone #pendingCard{order:3;min-height:auto;}
 html.is-phone #progressCard{order:4;}
-
-/* 卡片按内容自然高度，禁止 flex 压缩 */
 html.is-phone #recCard,
 html.is-phone #inputArea,
 html.is-phone #pendingCard,
-html.is-phone #progressCard{
-  flex:0 0 auto;
-}
-
-/* 手机端不显示热力图 */
+html.is-phone #progressCard{flex:0 0 auto;}
 html.is-phone #heatmapCard{display:none;}
-
-/* 录入区折叠 */
 html.is-phone #inputArea.collapsed #dropForm{display:none;}
 html.is-phone #inputArea.collapsed #submitDrop{display:none;}
 html.is-phone #inputArea.collapsed #clearDropBtn{display:none;}
-
-/* 手机端标题可点、显示箭头、隐藏数量标签 */
-html.is-phone .input-header h3{
-  cursor:pointer;
-  user-select:none;
-  display:flex;
-  align-items:center;
-  gap:5px;
-}
+html.is-phone .input-header h3{cursor:pointer;user-select:none;display:flex;align-items:center;gap:5px;}
 html.is-phone .input-header .lbl{display:none;}
 html.is-phone #inputArrow{
-  display:inline-block;
-  width:0;
-  height:0;
-  border-top:4px solid transparent;
-  border-bottom:4px solid transparent;
-  border-left:6px solid var(--dim);
-  transition:transform .18s;
-  transform-origin:50% 50%;
-  flex-shrink:0;
+  display:inline-block;width:0;height:0;
+  border-top:4px solid transparent;border-bottom:4px solid transparent;
+  border-left:6px solid var(--dim);transition:transform .18s;
+  transform-origin:50% 50%;flex-shrink:0;
 }
 html.is-phone #inputArrow::before{content:none;}
 html.is-phone #inputArea:not(.collapsed) #inputArrow{transform:rotate(90deg);}
-
-/* 触摸友好 */
 html.is-phone button{padding:8px 14px;font-size:12.5px;}
 html.is-phone button.small{padding:5px 10px;font-size:11.5px;}
 html.is-phone select,
 html.is-phone input[type=text],
 html.is-phone input[type=number]{padding:7px 10px;font-size:13px;}
 html.is-phone .input-matrix{grid-template-columns:1fr;}
-
-/* 手机端字号放大 */
 html.is-phone .card h3{font-size:13px;}
 html.is-phone .input-header h3{font-size:13px !important;}
 html.is-phone .rec-region{font-size:12px;}
@@ -250,19 +209,15 @@ html.is-phone .rec-lock-val{font-size:13px;}
 html.is-phone .rec-stats{font-size:12px;line-height:1.6;padding:7px 10px;}
 html.is-phone .rec-adopt{font-size:13px;padding:10px;}
 html.is-phone .hint{font-size:12px;}
-
-/* 手机端全局进度卡片紧凑化 */
 html.is-phone #progressCard{padding:10px 12px;}
 html.is-phone #progressCard #baseProgressRow{display:none !important;}
 html.is-phone #progressCard #etaHint{display:none !important;}
 html.is-phone #progressCard .progress-bar{margin:4px 0 0;}
 html.is-phone .progress-foot{justify-content:flex-start;}
 html.is-phone #backupWarn{text-align:left;display:none;}
-
 html.is-phone .matrix-item .matrix-line{grid-template-columns:2fr 1fr;}
 
-/* ============ 紧凑热力图 ============ */
-.heatmap.compact{min-width:0;grid-template-columns:52px repeat(14, minmax(18px, 1fr));}
+.heatmap.compact{min-width:0;grid-template-columns:52px repeat(var(--hm-cols, 14), minmax(18px, 1fr));}
 .heatmap.compact .hm-cell{height:18px;}
 .heatmap.compact .hm-sq{width:10px;height:10px;border-radius:2px;}
 .heatmap.compact .hm-sq.master,
@@ -274,10 +229,8 @@ html.is-phone .matrix-item .matrix-line{grid-template-columns:2fr 1fr;}
 .rec-body{flex:1 1 auto;overflow-y:auto;min-height:0;line-height:1.4;position:relative}
 .rec-body.loading{opacity:.35;transition:opacity .15s}
 .rec-body.loading::after{
-  content:'计算中…';
-  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-  font-size:12px;font-weight:700;color:var(--accent);
-  letter-spacing:.5px;pointer-events:none;white-space:nowrap;
+  content:'计算中…';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.5px;pointer-events:none;white-space:nowrap;
   text-shadow:0 0 8px var(--bg),0 0 16px var(--bg);
 }
 @keyframes recFlash{
@@ -297,7 +250,7 @@ button.secondary:disabled:hover{background:var(--card3)}
 .main-right > .card:last-child{flex:1 1 0;display:flex;flex-direction:column;min-height:100px;padding:9px 11px;overflow:hidden;}
 .main-right > .card:last-child .pending-list{flex:1;overflow-y:auto;min-height:0}
 .heatmap-wrapper{flex:1;overflow:auto;padding:4px 0 2px;min-height:0;min-width:0;position:relative}
-.heatmap{display:grid;grid-template-columns:52px repeat(14, minmax(22px, 1fr));gap:2px;width:100%;padding-top:4px;}
+.heatmap{display:grid;grid-template-columns:52px repeat(var(--hm-cols, 14), minmax(22px, 1fr));gap:2px;width:100%;padding-top:4px;}
 .hm-col-header{font-size:10.5px;color:var(--text2);font-weight:600;display:flex;align-items:flex-end;justify-content:center;padding-bottom:5px;height:22px;letter-spacing:.3px;}
 .hm-row-header{font-size:10.5px;color:var(--text2);font-weight:500;display:flex;align-items:center;justify-content:flex-end;padding-right:7px;height:20px;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .hm-cell{height:20px;display:flex;align-items:center;justify-content:center;gap:2px;cursor:pointer;border-radius:3px;transition:background .15s;position:relative}
@@ -353,7 +306,7 @@ button.secondary:disabled:hover{background:var(--card3)}
 .matrix-item{background:var(--card2);border-radius:var(--radius);padding:7px 8px;border:1px solid var(--border);transition:background .2s, border-color .2s, box-shadow .2s;}
 .matrix-item .matrix-title{font-size:10.5px;color:var(--dim);font-weight:600;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;gap:6px;letter-spacing:.4px;line-height:1.2;}
 .matrix-item .result-label{font-size:10px;font-weight:700;letter-spacing:.3px}
-.matrix-item .matrix-line{display:grid;grid-template-columns:1fr 44px;gap:4px;margin-bottom:4px}
+.matrix-item .matrix-line{display:grid;grid-template-columns:2fr 1fr;gap:4px;margin-bottom:4px}
 .matrix-item .matrix-line:last-child{margin-bottom:0}
 .matrix-item select{padding:4px 6px;font-size:11px}
 .matrix-item.is-new{border-color:var(--ok);background:rgba(92,207,109,.1);box-shadow:0 0 0 1px var(--ok) inset, 0 0 12px rgba(92,207,109,.15);}
@@ -379,11 +332,12 @@ button.secondary:disabled:hover{background:var(--card3)}
 [data-theme="light"] .matrix-table th{background:#eef1f6}
 .matrix-table th.row-head{text-align:right;padding-right:8px;background:#1a1e24;color:var(--gold);font-weight:500;font-size:10.5px;white-space:nowrap;width:80px;letter-spacing:.2px;}
 [data-theme="light"] .matrix-table th.row-head{background:#eef1f6}
-.matrix-table td{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--ok);font-weight:600;letter-spacing:.5px;font-size:11.5px;position:relative}
+.matrix-table td{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--ok);font-weight:600;letter-spacing:.5px;font-size:11.5px;position:relative;cursor:pointer;}
 .matrix-table td.empty{color:#252a31;font-weight:400}
 [data-theme="light"] .matrix-table td.empty{color:#d0d5dd}
-.matrix-table td.filled{background:rgba(92,207,109,.06);cursor:pointer;transition:background .12s}
+.matrix-table td.filled{background:rgba(92,207,109,.06);transition:background .12s}
 .matrix-table td.filled:hover{background:rgba(91,163,255,.18);outline:1px solid var(--accent)}
+.matrix-table td.empty:hover:not(.dimmed){background:rgba(91,163,255,.08);outline:1px dashed var(--accent-dim)}
 .matrix-table td.master{background:rgba(141,255,144,.14);color:#8dff90}
 [data-theme="light"] .matrix-table td.master{color:#2e9a3e;background:rgba(46,154,62,.1)}
 .matrix-table tr:hover td:not(.empty){background:rgba(91,163,255,.07)}
@@ -442,13 +396,17 @@ button.secondary:disabled:hover{background:var(--card3)}
 @keyframes slideUp{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
 .modal-box h3{margin:0 0 4px;font-size:13px;color:var(--accent);font-weight:700;letter-spacing:.3px}
 .modal-key{font-size:11.5px;color:var(--text2);margin-bottom:12px;word-break:break-all;font-family:ui-monospace,Menlo,Consolas,monospace}
-.edit-row{display:grid;grid-template-columns:54px 1fr;gap:10px;align-items:center;margin-bottom:8px}
+.edit-row{display:grid;grid-template-columns:64px 1fr;gap:10px;align-items:center;margin-bottom:8px}
 .edit-row label{font-size:11px;color:var(--dim);letter-spacing:.4px;text-transform:uppercase}
 .edit-row select{padding:6px 8px;font-size:12px}
 .modal-cost{font-size:11px;color:var(--text2);margin-top:10px;padding:8px 10px;background:var(--card2);border-radius:var(--radius);line-height:1.5;border:1px solid var(--border);}
 .modal-cost b{color:var(--ok);font-weight:600}
 .modal-actions{display:flex;gap:6px;margin-top:14px;justify-content:flex-end;flex-wrap:wrap;align-items:center}
 .modal-actions .spacer{flex:1}
+.custom-cap-box{background:rgba(230,185,92,.08);border:1px solid rgba(230,185,92,.3);border-radius:var(--radius);padding:8px 10px;margin-top:10px}
+.custom-cap-title{font-size:10.5px;color:var(--warn);font-weight:700;letter-spacing:.4px;margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.custom-cap-row{display:flex;gap:6px;align-items:center}
+.custom-cap-row input{width:90px}
 #page-weapons.active{padding:12px}
 .weapon-summary{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px;font-size:11px;color:var(--dim)}
 .weapon-summary b{color:var(--accent);font-size:13px}
@@ -525,6 +483,149 @@ button.secondary:disabled:hover{background:var(--card3)}
 .load-error p{color:var(--text2);max-width:520px;margin:0;font-size:13px;line-height:1.6}
 .load-error code{background:var(--card2);padding:2px 6px;border-radius:4px;color:var(--accent);
   font-family:ui-monospace,monospace;font-size:12px}
+
+/* 多份展开浮层（覆盖在内容上方，不撑开表格） */
+.copy-picker{position:fixed;z-index:350;background:var(--card);border:1px solid var(--border2);
+  border-radius:var(--radius);padding:6px 8px;min-width:130px;max-width:220px;
+  box-shadow:0 12px 32px rgba(0,0,0,.55), 0 0 0 1px rgba(91,163,255,.18);
+  font-size:11.5px;animation:slideUp .12s ease;}
+[data-theme="light"] .copy-picker{box-shadow:0 12px 32px rgba(0,0,0,.18), 0 0 0 1px rgba(59,126,216,.18)}
+.copy-picker-title{font-size:10px;color:var(--dim);margin-bottom:4px;letter-spacing:.3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,monospace;}
+.copy-picker-row{display:flex;justify-content:space-between;align-items:center;gap:8px;
+  padding:4px 6px;border-radius:var(--radius-sm);transition:background .12s;}
+.copy-picker-row:hover{background:var(--card2);}
+.copy-picker-code{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--ok);
+  font-weight:700;letter-spacing:.8px;font-size:12.5px;}
+.copy-picker-add{width:100%;margin-top:4px;padding:5px 8px;font-size:11px;
+  background:transparent;color:var(--accent);border:1px dashed var(--accent-dim);
+  border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;font-weight:600;
+  letter-spacing:.3px;transition:background .12s, border-color .12s;}
+.copy-picker-add:hover{background:rgba(91,163,255,.1);border-color:var(--accent);}
+
+/* ============ 自定义下拉 ============ */
+.cs-wrapper{
+  position:relative;
+  width:100%;
+  display:block;
+}
+.cs-wrapper > select{
+  position:absolute;
+  top:0;left:0;
+  width:100%;height:100%;
+  opacity:0;
+  pointer-events:none;
+}
+.cs-display{
+  position:relative;
+  background:var(--card2);
+  color:var(--text);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:5px 24px 5px 8px;
+  font-size:11.5px;
+  font-family:inherit;
+  line-height:1.45;
+  cursor:pointer;
+  transition:border-color .15s, background .15s;
+  user-select:none;
+  box-sizing:border-box;
+  min-height:26px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  outline:none;
+}
+.cs-display::after{
+  content:'';
+  position:absolute;
+  right:8px;
+  top:50%;
+  margin-top:-2.5px;
+  width:0;
+  height:0;
+  border-left:4px solid transparent;
+  border-right:4px solid transparent;
+  border-top:5px solid var(--dim);
+  transition:transform .15s;
+}
+.cs-wrapper.is-open .cs-display::after{
+  transform:rotate(180deg);
+}
+.cs-wrapper.is-open .cs-display,
+.cs-display:focus-visible{
+  border-color:var(--accent);
+  background:var(--card3);
+  box-shadow:0 0 0 2px rgba(91,163,255,.18);
+}
+[data-theme="light"] .cs-wrapper.is-open .cs-display,
+[data-theme="light"] .cs-display:focus-visible{
+  box-shadow:0 0 0 2px rgba(59,126,216,.18);
+}
+.cs-wrapper.is-disabled .cs-display{
+  opacity:.55;
+  cursor:not-allowed;
+  background:#1a1d22;
+  color:var(--dim);
+}
+[data-theme="light"] .cs-wrapper.is-disabled .cs-display{
+  background:#e5e9ef;
+}
+.cs-display:hover{
+  border-color:var(--border2);
+}
+.cs-wrapper.is-open .cs-display:hover{
+  border-color:var(--accent);
+}
+html.is-phone .cs-display{
+  padding:7px 26px 7px 10px;
+  font-size:13px;
+  min-height:32px;
+}
+.cs-dropdown{
+  position:fixed;
+  z-index:550;
+  background:var(--card);
+  border:1px solid var(--border2);
+  border-radius:var(--radius);
+  padding:4px;
+  box-shadow:0 12px 32px rgba(0,0,0,.55), 0 0 0 1px rgba(91,163,255,.18);
+  max-height:260px;
+  overflow-y:auto;
+  animation:slideUp .12s ease;
+}
+[data-theme="light"] .cs-dropdown{
+  box-shadow:0 12px 32px rgba(0,0,0,.18), 0 0 0 1px rgba(59,126,216,.18);
+}
+.cs-option{
+  padding:5px 10px;
+  font-size:11.5px;
+  color:var(--text2);
+  cursor:pointer;
+  border-radius:var(--radius-sm);
+  transition:background .12s, color .12s;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.cs-option:hover,
+.cs-option.is-hovered{
+  background:var(--card2);
+  color:var(--text);
+}
+.cs-option.is-selected{
+  color:var(--accent);
+  font-weight:600;
+  background:rgba(91,163,255,.1);
+}
+.cs-option.is-selected:hover,
+.cs-option.is-selected.is-hovered{
+  background:rgba(91,163,255,.18);
+}
+html.is-phone .cs-option{
+  padding:8px 12px;
+  font-size:13px;
+}
 </style>
 </head>
 <body>
@@ -542,7 +643,7 @@ button.secondary:disabled:hover{background:var(--card3)}
   <div class="main-top">
     <div class="main-left">
       <div class="card" id="heatmapCard">
-        <h3><span>收集进度</span><span class="pill" id="progressPill">0 / 840</span></h3>
+        <h3><span>收集进度</span><span class="pill" id="progressPill">0 / —</span></h3>
         <div class="heatmap-wrapper"><div id="heatmap" class="heatmap"></div></div>
       </div>
     </div>
@@ -592,7 +693,7 @@ button.secondary:disabled:hover{background:var(--card3)}
   <div class="card" id="progressCard">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
       <span style="font-size:11px;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;font-weight:600">全局进度 <span id="sprintPill" class="pill warn" style="display:none;margin-left:4px">⚡ 冲刺</span></span>
-      <span style="font-size:12px"><b id="collectedCount" style="color:var(--accent);font-size:14px">0</b> <span style="color:var(--dim)">/</span> <span id="totalCount" style="color:var(--text2)">840</span></span>
+<span style="font-size:12px"><b id="collectedCount" style="color:var(--accent);font-size:14px">0</b> <span style="color:var(--dim)">/</span> <span id="totalCount" style="color:var(--text2)">—</span></span>
     </div>
     <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
     <div id="baseProgressRow" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;font-size:10.5px;color:var(--dim)"></div>
@@ -613,7 +714,7 @@ button.secondary:disabled:hover{background:var(--card3)}
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px">
       <div class="hint" id="detailStats">—</div>
-      <div class="hint">点击绿色格子可修改等级或删除</div>
+      <div class="hint">点击格子：空 → 快捷录入；已有 → 展开份列表</div>
       <button id="detailClearFilter" class="small secondary">清除筛选</button>
     </div>
   </div>
@@ -703,8 +804,17 @@ button.secondary:disabled:hover{background:var(--card3)}
 
 <div id="page-settings" class="page">
   <div class="card">
+    <h3><span>关于</span></h3>
+    <div class="row">
+      <div class="row-label">版本</div>
+      <div style="font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--accent);font-weight:700;font-size:13px">v1.0</div>
+    </div>
+    <div class="hint" style="margin-top:6px">终末地基质全收集管理器 · 理论组合 <span id="aboutTotalCombos">—</span> 种</div>
+  </div>
+
+  <div class="card">
     <h3><span>外观</span></h3>
-        <div class="row">
+    <div class="row">
       <div class="row-label">主题</div>
       <select id="themeSelect" style="width:140px">
         <option value="dark">深色</option>
@@ -778,7 +888,7 @@ button.secondary:disabled:hover{background:var(--card3)}
 
   <div class="card">
     <h3><span>数据管理</span></h3>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button id="copyStateBtn" class="secondary">📋 一键复制 JSON</button>
       <button id="exportFullBtn" class="secondary">导出完整备份</button>
       <button id="exportLiteBtn" class="secondary">导出精简版</button>
@@ -807,13 +917,62 @@ button.secondary:disabled:hover{background:var(--card3)}
     <div class="edit-row"><label>附加</label><select id="editAddLv"></select></div>
     <div class="edit-row"><label>技能</label><select id="editSkillLv"></select></div>
     <div class="modal-cost" id="editCostPreview"></div>
+    <div class="custom-cap-box">
+      <div class="custom-cap-title">⚙ 自定义保留份数</div>
+      <div class="custom-cap-row">
+        <input type="number" id="editCustomCapInput" min="1" max="5" placeholder="跟随全局">
+        <button id="editClearCapBtn" class="small secondary">清除</button>
+      </div>
+      <div class="hint" style="margin-top:4px;font-size:10px">留空表示跟随全局容量（武器需求 + 额外份数）。自定义范围 1~5，会覆盖全局。</div>
+    </div>
     <div class="modal-actions">
       <button id="editMaxBtn" class="secondary">一键升满</button>
-      <button id="editDeleteBtn" class="danger">删除记录</button>
+      <button id="editDeleteBtn" class="danger">删除此份</button>
       <span class="spacer"></span>
       <button id="editCancelBtn" class="secondary">取消</button>
       <button id="editSaveBtn">保存</button>
-   </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="quickAddModal">
+  <div class="modal-box">
+    <h3>快捷录入</h3>
+    <div class="modal-key" id="quickAddKey"></div>
+    <div class="edit-row"><label>基础</label><select id="quickAddBaseLv"></select></div>
+    <div class="edit-row"><label>附加</label><select id="quickAddAddLv"></select></div>
+    <div class="edit-row"><label>技能</label><select id="quickAddSkillLv"></select></div>
+    <div class="modal-cost" id="quickAddCostPreview"></div>
+    <div class="hint" style="margin-top:8px;font-size:10px">快捷录入不计入刷取历史，仅用于补录现有基质。</div>
+    <div class="modal-actions">
+      <button id="quickAddMaxBtn" class="secondary">一键升满</button>
+      <span class="spacer"></span>
+      <button id="quickAddCancelBtn" class="secondary">取消</button>
+      <button id="quickAddSaveBtn">创建</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="capacityModal">
+  <div class="modal-box">
+    <h3 id="capacityModalTitle">容量确认</h3>
+    <div id="capacityModalBody"></div>
+    <div class="modal-actions">
+      <button id="capacityModalCancel" class="secondary">取消</button>
+      <button id="capacityModalConfirm">增加容量</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="customCapModal">
+  <div class="modal-box">
+    <h3>自定义容量处理</h3>
+    <div id="customCapModalBody"></div>
+    <div class="modal-actions">
+      <button id="customCapCancelBtn" class="secondary">取消切换</button>
+      <button id="customCapClearBtn" class="danger">清除自定义</button>
+      <button id="customCapKeepBtn">保留自定义</button>
+    </div>
   </div>
 </div>
 
@@ -838,18 +997,20 @@ button.secondary:disabled:hover{background:var(--card3)}
     <h3 style="font-size:22px;color:var(--gold);margin-bottom:6px;letter-spacing:1px">全收集达成！</h3>
     <div id="celebrationSubtitle" style="font-size:12px;color:var(--dim);margin-bottom:14px"></div>
     <div id="celebrationStats"></div>
-    <div id="celebrationFooter" style="font-size:13px;color:var(--text2);line-height:1.9;margin:16px 0 20px"></div>
+    <div id="celebrationFooter" style="font-size:14px;color:var(--text2);line-height:1.9;margin:16px 0 20px;letter-spacing:1px"></div>
     <button id="celebrationCloseBtn" style="font-size:13px;padding:8px 24px">知道了</button>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 <div class="hm-tooltip" id="hmTooltip"></div>
+<div class="copy-picker" id="copyPicker" style="display:none"></div>
 
 <script>
 /* ============================================================
  *  常量
  * ============================================================ */
+const APP_VERSION = '1.0';
 const DEFAULT_DATA = {
   baseAttrs: ['敏捷', '力量', '意志', '智识', '主能力'],
   allAddAttrs: [
@@ -882,7 +1043,7 @@ const DEFAULT_DATA = {
 let EXT_REGIONS = [];
 let EXT_WEAPONS = [];
 
-const STORAGE_KEY = 'zmd-optimizer-v10';// 兼容历史数据，勿改
+const STORAGE_KEY = 'zmd-matrix-manager';
 const SNAPSHOT_PREFIX = STORAGE_KEY + '_snap_';
 const SNAPSHOT_MAX = 3;
 const EXPORT_REMIND_DAYS = 7;
@@ -890,9 +1051,9 @@ const STORAGE_WARN_BYTES = 4 * 1024 * 1024;
 const EXACT_ALGO_TOP_N = 30;
 const SECOND_PASS_DISCOUNT = 0.5;
 const HISTORY_PAGE_SIZE = 20;
-const NEW_BASE_ORDER = ['敏捷', '力量', '意志', '智识', '主能力'];
 const ETA_BATCH_SIZE = 60;
 const ETA_MAX_ITER = 60;
+const MAX_CUSTOM_CAP = 5;
 const deepClone = o => JSON.parse(JSON.stringify(o));
 
 /* ============================================================
@@ -905,6 +1066,7 @@ function defaultState(){
     data: d,
     enabledSites: {},
     collected: {},
+    keyCapacity: {},
     pendingDeletions: [],
     history: [],
     sprintMode: false,
@@ -921,9 +1083,11 @@ function defaultState(){
 }
 function migrateData(d){
   if(!d) return d;
-  if(d.baseAttrs && d.baseAttrs.length === 5 && NEW_BASE_ORDER.every(b => d.baseAttrs.includes(b))){
-    d.baseAttrs = NEW_BASE_ORDER.slice();
-  }
+  d.baseAttrs = deepClone(DEFAULT_DATA.baseAttrs);
+  d.allAddAttrs = deepClone(DEFAULT_DATA.allAddAttrs);
+  d.allSkillAttrs = deepClone(DEFAULT_DATA.allSkillAttrs);
+  d.levelConfig = deepClone(DEFAULT_DATA.levelConfig);
+  d.dropLevels = deepClone(DEFAULT_DATA.dropLevels);
   d.addAliases = deepClone(DEFAULT_DATA.addAliases);
   return d;
 }
@@ -945,6 +1109,7 @@ function loadState(){
       s.data.regions = deepClone(EXT_REGIONS);
       if(!s.enabledSites) s.enabledSites = {};
       if(!s.collected) s.collected = {};
+      if(!s.keyCapacity || typeof s.keyCapacity !== 'object') s.keyCapacity = {};
       if(!s.pendingDeletions) s.pendingDeletions = [];
       if(!s.history) s.history = [];
       if(typeof s.sprintMode !== 'boolean') s.sprintMode = false;
@@ -973,6 +1138,8 @@ let _demandCache = null;
 let _collectedView = null;
 let _lastGapList = [];
 let _historyPage = 1;
+let _quickAddTarget = null;
+let _copyPickerKey = null;
 
 /* ============================================================
  *  命名统一
@@ -1024,13 +1191,23 @@ function buildWeaponDemandMap(){
 }
 function invalidateDemandCache(){ _demandCache = null; }
 
-function getCapacity(key){
-  if(!state.respectWeaponDemand){
-    return 1;
-  }
+// 计算全局容量（不含自定义）
+function getGlobalCapacity(key){
+  if(!state.respectWeaponDemand) return 1;
   const demand = buildWeaponDemandMap()[key] || 1;
   const extra = state.extraCopies || 0;
   return Math.max(1, demand + extra);
+}
+// 计算最终容量（含自定义覆盖）
+function getCapacity(key){
+  if(state.keyCapacity && state.keyCapacity[key] != null){
+    return Math.max(1, Math.min(MAX_CUSTOM_CAP, state.keyCapacity[key]));
+  }
+  return getGlobalCapacity(key);
+}
+// 是否设置了自定义容量
+function hasCustomCapacity(key){
+  return !!(state.keyCapacity && state.keyCapacity[key] != null);
 }
 function getCollectedArr(key){
   const c = _collectedView || state.collected;
@@ -1060,51 +1237,51 @@ function getWorstIndex(arr){
 let _recentFetchKeys = null;
 let _recentEditKeys = null;
 
-function buildRecentFetchKeys(days){
-  const set = new Set();
-  if(!days || days <= 0) return set;
-  const cutoff = Date.now() - days * 86400000;
-  for(const h of (state.history || [])){
-    if(h.time < cutoff) continue;
-    for(const r of (h.results || [])){
-      if(r.status === 'new' || (r.status === 'dup' && r.keep)){
-        set.add(r.key);
-      }
-    }
-  }
-  return set;
-}
-
-function buildRecentEditKeys(days){
-  const set = new Set();
-  if(!days || days <= 0) return set;
+// 按「最近一次用户主动操作」分类，每个 key 只进其中一个 Set
+// 只关心：手动录入 / 快捷录入 → fetchSet；手动修改 → editSet
+// 校验修复、撤销恢复、sim、eta 不算用户主动操作
+function buildRecentKeys(days){
+  const fetchSet = new Set();
+  const editSet = new Set();
+  if(!days || days <= 0) return { fetchSet, editSet };
   const cutoff = Date.now() - days * 86400000;
   for(const key in state.collected){
     const arr = getCollectedArr(key);
-    if(arr.some(x => x.from === '手动修改' && x.time >= cutoff)){
-      set.add(key);
+    let latestFrom = null;
+    let latestTime = 0;
+    for(const inst of arr){
+      if(!inst.time || inst.time < cutoff) continue;
+      if(inst.from !== '手动录入' && inst.from !== '快捷录入' && inst.from !== '手动修改') continue;
+      if(inst.time > latestTime){
+        latestTime = inst.time;
+        latestFrom = inst.from;
+      }
     }
+    if(latestFrom === '手动修改') editSet.add(key);
+    else if(latestFrom === '手动录入' || latestFrom === '快捷录入') fetchSet.add(key);
   }
-  return set;
+  return { fetchSet, editSet };
 }
 
 function bestSqClass(key){
   const arr = getCollectedArr(key);
   if(!arr.length) return '';
-  const best = arr.reduce((b, x) => x.cost < b.cost ? x : b, arr[0]);
+  const best = arr.reduce((b, x) => b.cost < x.cost ? b : x, arr[0]);
   const isMaster = best.cost <= 0;
+  // 近期刷取 → 紫色（强调"最近有新动作"，即使已有满级份也覆盖）
+  if(_recentFetchKeys && _recentFetchKeys.has(key)){
+    return 'recent-fetch';
+  }
+  // 近期手动修改 → 满级金 / 非满级蓝
   if(_recentEditKeys && _recentEditKeys.has(key)){
     return isMaster ? 'recent-master' : 'recent-edit';
   }
-  if(_recentFetchKeys && _recentFetchKeys.has(key)){
-    return isMaster ? 'recent-master' : 'recent-fetch';
-  }
+  // 无近期动作 → 满级金，否则绿阶
   if(isMaster) return 'master';
   if(best.cost < 500) return 'high';
   if(best.cost < 1500) return 'mid';
   return 'low';
 }
-
 /* ============================================================
  *  迁移
  * ============================================================ */
@@ -1171,7 +1348,19 @@ function migrateNames(){
       });
     });
   }
-    if(changed){
+  // keyCapacity 的键也要走一遍迁移
+  if(state.keyCapacity && typeof state.keyCapacity === 'object'){
+    const nkc = {};
+    for(const k in state.keyCapacity){
+      const parts = String(k).split('|');
+      if(parts.length !== 3){ nkc[k] = state.keyCapacity[k]; continue; }
+      const nk = makeKey(parts[0], parts[1], parts[2]);
+      nkc[nk] = state.keyCapacity[k];
+      if(nk !== k) changed = true;
+    }
+    state.keyCapacity = nkc;
+  }
+  if(changed){
     try{
       localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeState()));
     }catch(e){ console.warn('迁移保存失败', e); }
@@ -1217,7 +1406,7 @@ function toast(msg){
   el.textContent = msg;
   el.classList.add('show');
   clearTimeout(el._t);
-  el._t = setTimeout(() => el.classList.remove('show'), 1600);
+  el._t = setTimeout(() => el.classList.remove('show'), 1800);
 }
 
 let _srcMapCache = null;
@@ -1246,6 +1435,25 @@ const getSrc = (map, a, s) => {
 };
 const getSites = (map, a, s) => map[a + '|' + s] || [];
 const srcClass = n => (n === 1 ? 'src-1' : n === 2 ? 'src-2' : n === 3 ? 'src-3' : 'src-more');
+
+/* ============================================================
+ *  目标自动解除
+ * ============================================================ */
+function pruneCompletedTargets(){
+  if(!state.targets || !state.targets.length) return [];
+  const removed = [];
+  const remaining = [];
+  for(const t of state.targets){
+    const key = makeKey(t.base, t.add, t.skill);
+    if(isKeySaturated(key)){
+      removed.push({ base: t.base, add: t.add, skill: t.skill });
+    } else {
+      remaining.push(t);
+    }
+  }
+  state.targets = remaining;
+  return removed;
+}
 
 /* ============================================================
  *  主题
@@ -1309,14 +1517,16 @@ function restoreSnapshot(ts){
     const restored = payload.data;
     restored.weapons = deepClone(EXT_WEAPONS);
     if(!restored.data) restored.data = deepClone(DEFAULT_DATA);
+    migrateData(restored.data);
     restored.data.regions = deepClone(EXT_REGIONS);
     if(!restored.enabledSites) restored.enabledSites = {};
     if(!restored.collected) restored.collected = {};
+    if(!restored.keyCapacity || typeof restored.keyCapacity !== 'object') restored.keyCapacity = {};
     if(!restored.pendingDeletions) restored.pendingDeletions = [];
     if(!restored.history) restored.history = [];
     if(typeof restored.sprintMode !== 'boolean') restored.sprintMode = false;
     if(typeof restored.extraCopies !== 'number') restored.extraCopies = 0;
-        if(typeof restored.respectWeaponDemand !== 'boolean') restored.respectWeaponDemand = true;
+    if(typeof restored.respectWeaponDemand !== 'boolean') restored.respectWeaponDemand = true;
     if(typeof restored.recentHighlightDays !== 'number') restored.recentHighlightDays = 7;
     if(typeof restored.tieBreaker !== 'string') restored.tieBreaker = '';
     if(typeof restored.doubleDrop !== 'boolean') restored.doubleDrop = false;
@@ -1397,9 +1607,11 @@ function buildExportPayload(includeHistory){
   const payload = {
     type: 'zmd-matrix-manager',
     version: 2,
+    appVersion: APP_VERSION,
     exportedAt: Date.now(),
     exportedAtReadable: new Date().toISOString(),
     collected: state.collected,
+    keyCapacity: state.keyCapacity || {},
     pendingDeletions: state.pendingDeletions,
     enabledSites: state.enabledSites,
     targets: state.targets,
@@ -1472,10 +1684,12 @@ function renderHeatmap(){
   const hm = document.getElementById('heatmap');
   const skills = state.data.allSkillAttrs;
   const adds = state.data.allAddAttrs;
-  _recentFetchKeys = buildRecentFetchKeys(state.recentHighlightDays);
-  _recentEditKeys = buildRecentEditKeys(state.recentHighlightDays);
+  const _rk = buildRecentKeys(state.recentHighlightDays);
+  _recentFetchKeys = _rk.fetchSet;
+  _recentEditKeys = _rk.editSet;
   hm.innerHTML = '';
   hm.classList.toggle('compact', isCompact);
+  hm.style.setProperty('--hm-cols', skills.length);
   const corner = document.createElement('div');
   hm.appendChild(corner);
   skills.forEach(s => {
@@ -1509,7 +1723,7 @@ function renderHeatmap(){
             const suffix = arr.length > 1 ? ` ×${arr.length}` : '';
             let recentMark = '';
             if(_recentEditKeys && _recentEditKeys.has(key)) recentMark = ' ✎';
-            else if(_recentFetchKeys && _recentFetchKeys.has(key)) recentMark = ' ★';
+            if(_recentFetchKeys && _recentFetchKeys.has(key)) recentMark = ' ★';
             lines.push(`${base}(${best.baseLv}/${best.addLv}/${best.skillLv})${suffix}${recentMark}`);
           }
         });
@@ -1529,7 +1743,7 @@ function renderHeatmap(){
             const suffix = arr.length > 1 ? ` ×${arr.length}` : '';
             let recentMark = '';
             if(_recentEditKeys && _recentEditKeys.has(key)) recentMark = ' ✎';
-            else if(_recentFetchKeys && _recentFetchKeys.has(key)) recentMark = ' ★';
+            if(_recentFetchKeys && _recentFetchKeys.has(key)) recentMark = ' ★';
             lines.push(`${base}(${best.baseLv}/${best.addLv}/${best.skillLv})${suffix}${recentMark}`);
           }
         });
@@ -1805,7 +2019,7 @@ function flashRecommendCard(){
   const card = document.getElementById('recCard');
   if(!card) return;
   card.classList.remove('rec-flash');
-  void card.offsetWidth;   // 强制 reflow，重置动画
+  void card.offsetWidth;
   card.classList.add('rec-flash');
   clearTimeout(card._flashTimer);
   card._flashTimer = setTimeout(() => card.classList.remove('rec-flash'), 950);
@@ -1932,16 +2146,88 @@ function renderRecommend(forceFlash){
   _lastRecSig = sig;
 }
 
-function adoptRecommendation(rec){
-  currentLock = {
-    baseCombo: rec.baseCombo.slice(),
-    siteKey: rec.site.key,
-    lockType: rec.lockType,
-    lockValue: rec.lockValue
+/* ============================================================
+ *  容量确认弹窗（通用）
+ * ============================================================ */
+function confirmCapacityIncrease(items, onResolve){
+  const modal = document.getElementById('capacityModal');
+  const title = document.getElementById('capacityModalTitle');
+  const body = document.getElementById('capacityModalBody');
+  const btnConfirm = document.getElementById('capacityModalConfirm');
+  const btnCancel = document.getElementById('capacityModalCancel');
+
+  if(items.length === 1){
+    title.textContent = '容量已满';
+    body.innerHTML = `<div class="hint">组合 <b style="color:var(--accent);font-family:ui-monospace,monospace">${items[0].display}</b> 容量已满（${items[0].currentCap}/${items[0].currentCap}），推荐算法会忽略它。<br><br>是否为它增加一份自定义容量？</div>`;
+    btnConfirm.textContent = `增加到 ${Math.min(MAX_CUSTOM_CAP, items[0].currentCap + 1)} 份`;
+  } else {
+    title.textContent = '多个目标容量已满';
+    body.innerHTML = `<div class="hint">以下 <b style="color:var(--warn)">${items.length}</b> 个组合容量已满，设为目标后推荐算法会忽略它们：<br><ul style="margin:8px 0 8px 18px;padding:0;color:var(--text2);font-family:ui-monospace,monospace;font-size:11px">${items.map(i => `<li>${i.display}</li>`).join('')}</ul>是否为它们统一增加一份自定义容量？</div>`;
+    btnConfirm.textContent = '全部增加 1 份';
+  }
+  modal.classList.add('show');
+
+  const cleanup = () => {
+    modal.classList.remove('show');
+    btnConfirm.onclick = null;
+    btnCancel.onclick = null;
   };
-  renderDropForm();
-  setInputCollapsed(false);
-  toast('已应用推荐方案，锁定字段不可更改');
+  btnConfirm.onclick = () => { cleanup(); onResolve(true); };
+  btnCancel.onclick = () => { cleanup(); onResolve(false); };
+}
+
+function adoptRecommendation(rec){
+  // 收集候选会产出的所有 key，找出「已饱和且未设自定义容量」的
+  const candidateKeys = [];
+  if(rec.lockType === 'add'){
+    for(const b of rec.baseCombo){
+      for(const s of rec.site.skills){
+        candidateKeys.push(makeKey(b, rec.lockValue, s));
+      }
+    }
+  } else {
+    for(const b of rec.baseCombo){
+      for(const a of rec.site.adds){
+        candidateKeys.push(makeKey(b, a, rec.lockValue));
+      }
+    }
+  }
+  const saturatedUnsatisfied = candidateKeys.filter(k =>
+    isKeySaturated(k) && !hasCustomCapacity(k)
+  );
+
+  const applyLock = () => {
+    currentLock = {
+      baseCombo: rec.baseCombo.slice(),
+      siteKey: rec.site.key,
+      lockType: rec.lockType,
+      lockValue: rec.lockValue
+    };
+    renderDropForm();
+    setInputCollapsed(false);
+    toast('已应用推荐方案，锁定字段不可更改');
+  };
+
+  if(saturatedUnsatisfied.length > 0){
+    const items = saturatedUnsatisfied.map(k => {
+      const [b, a, s] = k.split('|');
+      return { key: k, display: `${b} · ${toShortAdd(a)} · ${s}`, currentCap: getCapacity(k) };
+    });
+    confirmCapacityIncrease(items, (yes) => {
+      if(yes){
+        for(const item of items){
+          const cur = getCapacity(item.key);
+          state.keyCapacity[item.key] = Math.min(MAX_CUSTOM_CAP, cur + 1);
+        }
+        saveState();
+        renderAll();
+        toast(`已为 ${items.length} 个组合增加容量`);
+      }
+      applyLock();
+    });
+  } else {
+    applyLock();
+  }
 }
 
 function renderPendingDeletions(){
@@ -1988,6 +2274,7 @@ function computeEtaCacheKey(){
     saturatedCount,
     state.respectWeaponDemand ? 1 : 0,
     state.extraCopies || 0,
+    Object.keys(state.keyCapacity || {}).length,
     state.doubleDrop ? 1 : 0,
     state.sprintMode ? 1 : 0,
     state.tieBreaker || '',
@@ -2108,7 +2395,7 @@ function updateEtaHint(){
     etaEl.textContent = '没有启用的刷取点，无法预估。';
     return;
   }
-    if(est.drops <= 0){
+  if(est.drops <= 0){
     etaEl.innerHTML = '✓ 全部组合已收集，已毕业！';
     return;
   }
@@ -2197,7 +2484,7 @@ function buildCelebrationStats(){
   };
 }
 
-const CELEBRATION_POEM = '开始的第一改变了一切。<br>随之的第二承认了无数。<br>然后结束的第五个，则早已失去了意义。';
+const CELEBRATION_POEM = '我们，即是终末地工业。';
 
 function renderCelebration(){
   const subEl = document.getElementById('celebrationSubtitle');
@@ -2281,7 +2568,6 @@ function renderProgress(){
   document.getElementById('progressFill').style.width = (count / total * 100).toFixed(2) + '%';
   document.getElementById('progressPill').textContent = `${count} / ${total}`;
 
-  // 冲刺模式视觉反馈
   const progress = count / total;
   const sprintOn = state.sprintMode || progress > 0.85;
   const fill = document.getElementById('progressFill');
@@ -2296,7 +2582,6 @@ function renderProgress(){
     }
   }
 
-  // 全收集庆祝
   checkCelebration(count, total);
 
   scheduleEtaUpdate();
@@ -2323,6 +2608,7 @@ function initDetailFilters(){
   fb.innerHTML = '<option value="">全部</option>' + state.data.baseAttrs.map(a => `<option>${a}</option>`).join('');
   fa.innerHTML = '<option value="">全部</option>' + state.data.allAddAttrs.map(a => `<option>${a}</option>`).join('');
   fs.innerHTML = '<option value="">全部</option>' + state.data.allSkillAttrs.map(a => `<option>${a}</option>`).join('');
+  refreshAllCustomSelects();
 }
 
 function renderDetail(){
@@ -2384,7 +2670,8 @@ function renderDetail(){
         if(rowDim || baseDim) cls.push('dimmed');
         if(!cell || !cell.arr.length){
           cls.push('empty');
-          tds += `<td class="${cls.join(' ')}">·</td>`;
+          const keyAttr = (cell && !rowDim && !baseDim) ? ` data-empty-key="${cell.key}"` : '';
+          tds += `<td class="${cls.join(' ')}"${keyAttr}>·</td>`;
         } else {
           const best = cell.arr.reduce((bi, x) => x.cost < bi.cost ? x : bi, cell.arr[0]);
           const lvCode = `${best.baseLv}${best.addLv}${best.skillLv}`;
@@ -2392,7 +2679,7 @@ function renderDetail(){
           if(!cell.dim && !rowDim){
             cls.push('filled');
             if(best.cost <= 0) cls.push('master');
-            tds += `<td class="${cls.join(' ')}" data-edit-key="${cell.key}" title="点击修改 · ${best.baseLv}/${best.addLv}/${best.skillLv}${cell.arr.length > 1 ? ' · 共 ' + cell.arr.length + ' 份' : ''}">${lvCode}${multi}</td>`;
+            tds += `<td class="${cls.join(' ')}" data-edit-key="${cell.key}" title="点击查看/编辑${cell.arr.length > 1 ? '（共 ' + cell.arr.length + ' 份）' : ''}">${lvCode}${multi}</td>`;
           } else {
             tds += `<td class="${cls.join(' ')}">${lvCode}${multi}</td>`;
           }
@@ -2405,7 +2692,7 @@ function renderDetail(){
       <div class="skill-block" data-skill="${skill}">
         <div class="skill-block-header">
           <div class="skill-block-name">${skill}</div>
-          <div class="skill-block-stats">已收集 <b>${blockCount}</b> / ${12*5}</div>
+          <div class="skill-block-stats">已收集 <b>${blockCount}</b> / ${state.data.allAddAttrs.length * state.data.baseAttrs.length}</div>
         </div>
         <table class="matrix-table">
           <thead>${thead}</thead>
@@ -2413,18 +2700,101 @@ function renderDetail(){
         </table>
         <div class="matrix-footer">
           <span>行：附加属性 · 列：基础属性</span>
-          <span>格内三位数 = 基础 / 附加 / 技能等级 · 点击可修改</span>
+          <span>格内三位数 = 基础 / 附加 / 技能等级</span>
         </div>
       </div>
     `);
   });
   content.innerHTML = blocks.join('') || '<div class="card empty">没有符合条件的已收集基质</div>';
 
+  // 已填格子点击
   content.querySelectorAll('td[data-edit-key]').forEach(td => {
-    td.addEventListener('click', () => openEditModal(td.dataset.editKey));
+    td.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const key = td.dataset.editKey;
+      const arr = getCollectedArr(key);
+      if(!arr.length) return;
+      if(arr.length === 1){
+        openEditModal(key, 0);
+      } else {
+        showCopyPicker(key, td);
+      }
+    });
+  });
+  // 空格子点击 → 快捷录入
+  content.querySelectorAll('td[data-empty-key]').forEach(td => {
+    td.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const key = td.dataset.emptyKey;
+      if(!key) return;
+      const [b, a, s] = key.split('|');
+      openQuickAddModal(b, a, s);
+    });
   });
 }
 
+/* ============================================================
+ *  多份展开浮层
+ * ============================================================ */
+function showCopyPicker(key, anchorEl){
+  const picker = document.getElementById('copyPicker');
+  const arr = getCollectedArr(key);
+  if(!arr.length){ hideCopyPicker(); return; }
+  const [b, a, s] = key.split('|');
+  const rows = arr.map((item, idx) => {
+    const code = `${item.baseLv}${item.addLv}${item.skillLv}`;
+    return `<div class="copy-picker-row">
+      <span class="copy-picker-code">${code}</span>
+      <button class="small secondary" data-edit-idx="${idx}">编辑</button>
+    </div>`;
+  }).join('');
+  picker.innerHTML =
+    `<div class="copy-picker-title">${b} · ${toShortAdd(a)} · ${s}</div>` +
+    rows +
+    `<button class="copy-picker-add" data-quick-add="1">+ 新增基质</button>`;
+  picker.style.display = 'block';
+  // 定位：水平居中对齐格子
+  const rect = anchorEl.getBoundingClientRect();
+  const pRect = picker.getBoundingClientRect();
+  let left = rect.left + rect.width / 2 - pRect.width / 2;
+  let top = rect.bottom + 4;
+  if(top + pRect.height > window.innerHeight - 8){
+    top = Math.max(8, rect.top - pRect.height - 4);
+  }
+  if(left + pRect.width > window.innerWidth - 8){
+    left = window.innerWidth - pRect.width - 8;
+  }
+  if(left < 8) left = 8;
+  picker.style.left = left + 'px';
+  picker.style.top = top + 'px';
+  _copyPickerKey = key;
+
+  picker.querySelectorAll('button[data-edit-idx]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const idx = parseInt(btn.dataset.editIdx, 10);
+      hideCopyPicker();
+      openEditModal(key, idx);
+    });
+  });
+  const addBtn = picker.querySelector('button[data-quick-add]');
+  if(addBtn){
+    addBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      hideCopyPicker();
+      openQuickAddModal(b, a, s);
+    });
+  }
+}
+function hideCopyPicker(){
+  const picker = document.getElementById('copyPicker');
+  if(picker) picker.style.display = 'none';
+  _copyPickerKey = null;
+}
+
+/* ============================================================
+ *  编辑模态框
+ * ============================================================ */
 function buildLevelOptions(cfg){
   let html = '';
   for(let l = 1; l <= cfg.max; l++) html += `<option value="${l}">${l} 级</option>`;
@@ -2437,19 +2807,23 @@ function refreshEditCostPreview(){
   const cost = totalCost(b, a, s);
   const code = `${b}${a}${s}`;
   document.getElementById('editCostPreview').innerHTML =
-    `等级码 <b style="color:var(--text)">${code}</b> · 剩余冷却脂 <b>${cost}</b>`;
+    `等级码 <b style="color:var(--text)">${code}</b> ·消耗冷却脂 <b>${cost}</b>`;
 }
 
-function openEditModal(key){
+function openEditModal(key, idx){
   const arr = getCollectedArr(key);
   if(!arr.length) return;
   currentEditKey = key;
-  let bestIdx = 0;
-  for(let i = 1; i < arr.length; i++) if(arr[i].cost < arr[bestIdx].cost) bestIdx = i;
-  currentEditIndex = bestIdx;
-  const item = arr[bestIdx];
+  let targetIdx = idx;
+  if(targetIdx === undefined || targetIdx === null || targetIdx < 0 || targetIdx >= arr.length){
+    let bestIdx = 0;
+    for(let i = 1; i < arr.length; i++) if(arr[i].cost < arr[bestIdx].cost) bestIdx = i;
+    targetIdx = bestIdx;
+  }
+  currentEditIndex = targetIdx;
+  const item = arr[targetIdx];
   const [b, a, s] = key.split('|');
-  const totalNote = arr.length > 1 ? `（共 ${arr.length} 份，编辑最优份）` : '';
+  const totalNote = arr.length > 1 ? `（共 ${arr.length} 份，当前编辑第 ${targetIdx + 1} 份）` : '';
   document.getElementById('editModalKey').textContent = `${b} · ${toShortAdd(a)} · ${s} ${totalNote}`;
   const cfg = state.data.levelConfig;
   const baseSel = document.getElementById('editBaseLv');
@@ -2462,6 +2836,15 @@ function openEditModal(key){
   addSel.value = item.addLv;
   skillSel.value = item.skillLv;
   refreshEditCostPreview();
+
+  // 自定义容量输入
+  const capInput = document.getElementById('editCustomCapInput');
+  if(capInput){
+    const custom = state.keyCapacity && state.keyCapacity[key];
+    capInput.value = custom != null ? custom : '';
+    capInput.placeholder = `跟随全局（${getGlobalCapacity(key)}）`;
+  }
+
   document.getElementById('editModal').classList.add('show');
 }
 function closeEditModal(){
@@ -2470,6 +2853,79 @@ function closeEditModal(){
   document.getElementById('editModal').classList.remove('show');
 }
 
+/* ============================================================
+ *  快捷录入模态框
+ * ============================================================ */
+function refreshQuickAddCostPreview(){
+  const b = parseInt(document.getElementById('quickAddBaseLv').value, 10);
+  const a = parseInt(document.getElementById('quickAddAddLv').value, 10);
+  const s = parseInt(document.getElementById('quickAddSkillLv').value, 10);
+  const cost = totalCost(b, a, s);
+  document.getElementById('quickAddCostPreview').innerHTML =
+    `等级码 <b style="color:var(--text)">${b}${a}${s}</b> · 消耗冷却脂 <b>${cost}</b>`;
+}
+function openQuickAddModal(base, add, skill){
+  _quickAddTarget = { base, add, skill };
+  document.getElementById('quickAddKey').textContent = `${base} · ${toShortAdd(add)} · ${skill}`;
+  const cfg = state.data.levelConfig;
+  const baseSel = document.getElementById('quickAddBaseLv');
+  const addSel = document.getElementById('quickAddAddLv');
+  const skillSel = document.getElementById('quickAddSkillLv');
+  baseSel.innerHTML = buildLevelOptions(cfg.base);
+  addSel.innerHTML = buildLevelOptions(cfg.add);
+  skillSel.innerHTML = buildLevelOptions(cfg.skill);
+  baseSel.value = 1;
+  addSel.value = 1;
+  skillSel.value = 1;
+  refreshQuickAddCostPreview();
+  document.getElementById('quickAddModal').classList.add('show');
+}
+function closeQuickAddModal(){
+  _quickAddTarget = null;
+  document.getElementById('quickAddModal').classList.remove('show');
+}
+function confirmQuickAdd(){
+  if(!_quickAddTarget) return;
+  const { base, add, skill } = _quickAddTarget;
+  const baseLv = parseInt(document.getElementById('quickAddBaseLv').value, 10);
+  const addLv = parseInt(document.getElementById('quickAddAddLv').value, 10);
+  const skillLv = parseInt(document.getElementById('quickAddSkillLv').value, 10);
+  const key = makeKey(base, add, skill);
+  const cost = totalCost(baseLv, addLv, skillLv);
+  const arr = getCollectedArr(key);
+  const cap = getCapacity(key);
+  const now = Date.now();
+  if(arr.length < cap){
+    arr.push({ iid: newIid(), baseLv, addLv, skillLv, cost, time: now, from: '快捷录入' });
+    setCollectedArr(key, arr);
+    toast(`已录入（${arr.length}/${cap} 份）`);
+  } else {
+    const worstIdx = getWorstIndex(arr);
+    const worst = arr[worstIdx];
+    if(cost < worst.cost){
+      state.pendingDeletions.push({ key, baseLv: worst.baseLv, addLv: worst.addLv, skillLv: worst.skillLv, cost: worst.cost, time: now, iid: worst.iid });
+      arr[worstIdx] = { iid: newIid(), baseLv, addLv, skillLv, cost, time: now, from: '快捷录入' };
+      setCollectedArr(key, arr);
+      toast('已替换最优份，旧份进暂存区');
+    } else {
+      toast(`容量已满（${cap}），且新基质不如现有最差份，已拒绝`);
+      closeQuickAddModal();
+      return;
+    }
+  }
+  // 目标自动解除（快捷录入不记历史，所以不返回给 history）
+  const removedTargets = pruneCompletedTargets();
+  if(removedTargets.length){
+    toast(`目标「${removedTargets.map(t => t.base + '·' + toShortAdd(t.add) + '·' + t.skill).join('，')}」已达成，自动移除`);
+  }
+  saveState();
+  closeQuickAddModal();
+  renderAll();
+}
+
+/* ============================================================
+ *  目标弹窗
+ * ============================================================ */
 let _targetsDraft = [];
 function openTargetsModal(){
   _targetsDraft = (state.targets || []).map(t => ({ ...t }));
@@ -2522,13 +2978,48 @@ function saveTargets(){
   const valid = _targetsDraft
     .filter(t => t.base && t.add && t.skill)
     .map(t => ({ base: toFullBase(t.base), add: toFullAdd(t.add), skill: toFullSkill(t.skill) }));
-  state.targets = valid;
-  saveState();
-  closeTargetsModal();
-  renderRecommend();
-  renderWeapons();
-  toast(valid.length ? `已设置 ${valid.length} 个目标` : '已清空目标');
+
+  // 检查已饱和但未设自定义容量的
+  const saturatedItems = [];
+  for(const t of valid){
+    const k = makeKey(t.base, t.add, t.skill);
+    if(isKeySaturated(k) && !hasCustomCapacity(k)){
+      saturatedItems.push({ key: k, display: `${t.base} · ${toShortAdd(t.add)} · ${t.skill}`, currentCap: getCapacity(k) });
+    }
+  }
+
+  const applySave = () => {
+    // 过滤掉已饱和的（未加容量时它们会被推荐忽略，直接不加）
+    const finalTargets = valid.filter(t => {
+      const k = makeKey(t.base, t.add, t.skill);
+      return !isKeySaturated(k);
+    });
+    state.targets = finalTargets;
+    saveState();
+    closeTargetsModal();
+    renderRecommend();
+    renderWeapons();
+    toast(finalTargets.length ? `已设置 ${finalTargets.length} 个目标` : '已清空目标');
+  };
+
+  if(saturatedItems.length > 0){
+    closeTargetsModal();
+    confirmCapacityIncrease(saturatedItems, (yes) => {
+      if(yes){
+        for(const item of saturatedItems){
+          const cur = getCapacity(item.key);
+          state.keyCapacity[item.key] = Math.min(MAX_CUSTOM_CAP, cur + 1);
+        }
+        saveState();
+        renderAll();
+      }
+      applySave();
+    });
+  } else {
+    applySave();
+  }
 }
+
 function saveEditModal(){
   if(!currentEditKey) return;
   const arr = getCollectedArr(currentEditKey);
@@ -2541,28 +3032,60 @@ function saveEditModal(){
   inst.baseLv = baseLv; inst.addLv = addLv; inst.skillLv = skillLv;
   inst.cost = cost; inst.time = Date.now(); inst.from = '手动修改';
   setCollectedArr(currentEditKey, arr);
+
+  // 自定义容量
+  const capInput = document.getElementById('editCustomCapInput');
+  if(capInput){
+    const raw = String(capInput.value || '').trim();
+    if(raw === ''){
+      delete state.keyCapacity[currentEditKey];
+    } else {
+      const v = parseInt(raw, 10);
+      if(isNaN(v) || v < 1 || v > MAX_CUSTOM_CAP){
+        toast(`自定义容量需在 1~${MAX_CUSTOM_CAP} 之间`);
+        return;
+      }
+      state.keyCapacity[currentEditKey] = v;
+    }
+  }
+
   saveState();
   closeEditModal();
+  // 目标自动解除
+  const removedTargets = pruneCompletedTargets();
+  if(removedTargets.length){
+    toast(`目标「${removedTargets.map(t => t.base + '·' + toShortAdd(t.add) + '·' + t.skill).join('，')}」已达成，自动移除`);
+    saveState();
+  }
   renderHeatmap(); renderBaseProgressRow(); renderProgress();
   renderRecommend(); renderDetail(); renderHistory(); renderGaps(); renderWeapons();
-  toast('已更新强化等级');
+  toast('已更新');
 }
 function deleteEditKey(){
   if(!currentEditKey) return;
   const arr = getCollectedArr(currentEditKey);
   if(!arr.length) { closeEditModal(); return; }
   const msg = arr.length > 1
-    ? `删除该组合的最优份（共 ${arr.length} 份，删除后剩 ${arr.length - 1} 份）？`
+    ? `删除该组合的第 ${currentEditIndex + 1} 份（共 ${arr.length} 份，删除后剩 ${arr.length - 1} 份）？`
     : `从已收集记录中删除此基质？该操作不可恢复。`;
   if(!confirm(msg)) return;
   arr.splice(currentEditIndex, 1);
-  setCollectedArr(currentEditKey, arr);
+  if(arr.length === 0){
+    // 删掉整个 key（连带清掉自定义容量）
+    delete state.collected[currentEditKey];
+    delete state.keyCapacity[currentEditKey];
+  } else {
+    setCollectedArr(currentEditKey, arr);
+  }
   saveState(); closeEditModal();
   renderHeatmap(); renderBaseProgressRow(); renderProgress();
   renderRecommend(); renderDetail(); renderHistory(); renderGaps(); renderWeapons();
   toast('已删除记录');
 }
 
+/* ============================================================
+ *  缺口
+ * ============================================================ */
 function initGapFilters(){
   const gb = document.getElementById('gapFilterBase');
   const ga = document.getElementById('gapFilterAdd');
@@ -2651,7 +3174,7 @@ function isWeaponComplete(w){
   return arr.some(x => x.cost <= 0);
 }
 function renderWeaponSlots(key, demand){
-  const displayDemand = state.respectWeaponDemand ? demand : 1;
+  const displayDemand = getCapacity(key);
   const arr = getCollectedArr(key);
   const sorted = arr.slice().sort((a, b) => {
     if(a.cost <= 0 && b.cost > 0) return -1;
@@ -2681,19 +3204,46 @@ function toggleWeaponTarget(weaponId){
   const idx = state.targets.findIndex(t => makeKey(t.base, t.add, t.skill) === k);
   if(idx >= 0){
     state.targets.splice(idx, 1);
+    saveState();
+    renderWeapons();
+    renderRecommend();
     toast(`已移除目标：${w.name}`);
-  } else {
-    if(state.targets.length >= 3){ toast('最多 3 个目标，请先在「⚙ 目标」里移除一个'); return; }
+    return;
+  }
+  if(state.targets.length >= 3){
+    toast('最多 3 个目标，请先在「⚙ 目标」里移除一个');
+    return;
+  }
+
+  const addTarget = () => {
     state.targets.push({
       base: toFullBase(w.base),
       add: toFullAdd(w.add),
       skill: toFullSkill(w.skill)
     });
+    saveState();
+    renderWeapons();
+    renderRecommend();
     toast(`已设为目标：${w.name}`);
+  };
+
+  if(isKeySaturated(k) && !hasCustomCapacity(k)){
+    confirmCapacityIncrease(
+      [{ key: k, display: `${w.base} · ${toShortAdd(w.add)} · ${w.skill}`, currentCap: getCapacity(k) }],
+      (yes) => {
+        if(yes){
+          state.keyCapacity[k] = Math.min(MAX_CUSTOM_CAP, getCapacity(k) + 1);
+          saveState();
+          renderAll();
+          addTarget();
+        } else {
+          toast('已取消，未添加目标');
+        }
+      }
+    );
+  } else {
+    addTarget();
   }
-  saveState();
-  renderWeapons();
-  renderRecommend();
 }
 
 function renderWeapons(){
@@ -2715,6 +3265,7 @@ function renderWeapons(){
       o.value = t; o.textContent = t;
       ft.appendChild(o);
     });
+    if(_csSyncMap.has(ft)) _csSyncMap.get(ft)();
   }
 
   const fType = ft ? ft.value : '';
@@ -2762,7 +3313,8 @@ function renderWeapons(){
       ? `<div class="weapon-shared">共用该基质：<b>${sharedWeapons.map(x => x.name).join('、')}</b></div>`
       : '';
     const demand = demandMap[key] || 1;
-    const countHtml = demand > 1 ? renderWeaponSlots(key, demand) : '';
+    const showSlots = getCapacity(key) > 1 || hasCustomCapacity(key);
+    const countHtml = showSlots ? renderWeaponSlots(key, demand) : '';
     const targeted = isWeaponTargeted(w);
 
     return `<div class="weapon-card ${cardCls}">
@@ -2891,7 +3443,7 @@ function renderHistory(){
       return `<div class="history-row${skipCls}">
         <span class="h-name" title="${e.name}">${e.name}</span>
         <span class="h-lv">${e.lv}</span>
-        <span class="h-val">剩余 ${costTxt}</span>
+        <span class="h-val">消耗 ${costTxt}</span>
         <span class="h-status ${cls}">${txt}</span>
       </div>`;
     }).join('');
@@ -2981,6 +3533,17 @@ function undoHistory(origIdx){
           arr.push({ iid: newIid(), baseLv: old.baseLv, addLv: old.addLv, skillLv: old.skillLv, cost: old.cost, time: old.time, from: '撤销恢复' });
         }
         setCollectedArr(r.key, arr);
+      }
+    }
+  }
+  // 恢复被自动移除的目标
+  if(Array.isArray(h.removedTargets)){
+    for(const t of h.removedTargets){
+      const k = makeKey(t.base, t.add, t.skill);
+      if(!(state.targets || []).some(x => makeKey(x.base, x.add, x.skill) === k)){
+        if(state.targets.length < 3){
+          state.targets.push({ base: t.base, add: t.add, skill: t.skill });
+        }
       }
     }
   }
@@ -3106,8 +3669,9 @@ function handleSubmitDrop(){
       }
     }
   });
-  // 历史记录不设上限，完整保留
-    state.history.unshift({ time: now, site: '手动录入', items, results });
+  // 目标自动解除（记录到历史，撤销时可恢复）
+  const removedTargets = pruneCompletedTargets();
+  state.history.unshift({ time: now, site: '手动录入', items, results, removedTargets });
   _historyPage = 1;
   saveState();
   renderPendingDeletions();
@@ -3119,7 +3683,11 @@ function handleSubmitDrop(){
   if(activeTab === 'weapons') renderWeapons();
   if(activeTab === 'history'){ renderSevenDayChart(); renderHistory(); }
   if(document.documentElement.classList.contains('is-phone')) setInputCollapsed(true);
-  toast('已提交，新 ' + results.filter(r => r.status === 'new').length + ' 个');
+  let msg = '已提交，新 ' + results.filter(r => r.status === 'new').length + ' 个';
+  if(removedTargets.length){
+    msg += ` · 目标「${removedTargets.map(t => t.base + '·' + toShortAdd(t.add) + '·' + t.skill).join('，')}」已达成`;
+  }
+  toast(msg);
 }
 
 function renderSettings(){
@@ -3203,6 +3771,7 @@ function renderSettings(){
       saveState();
     }
     tb.value = state.tieBreaker || '';
+    if(_csSyncMap.has(tb)) _csSyncMap.get(tb)();
   }
 
   const dd = document.getElementById('doubleDropToggle');
@@ -3211,7 +3780,7 @@ function renderSettings(){
   const ea = document.getElementById('exactAlgoToggle');
   if(ea) ea.checked = !!state.exactAlgo;
 
-    const ts = document.getElementById('themeSelect');
+  const ts = document.getElementById('themeSelect');
   if(ts) ts.value = getStoredTheme();
 
   const recentDaysInput = document.getElementById('recentHighlightDaysInput');
@@ -3238,6 +3807,9 @@ function renderSettings(){
       sizeHint.textContent = `本地存储已用：${formatBytes(size)}`;
     }
   }
+
+  const aboutTotal = document.getElementById('aboutTotalCombos');
+  if(aboutTotal) aboutTotal.textContent = totalCombinations();
 
   renderSnapshotList();
 }
@@ -3268,12 +3840,13 @@ function handleImport(file){
       if(!payload.collected) throw new Error('缺少 collected 字段');
       const hasHistory = Object.prototype.hasOwnProperty.call(payload, 'history');
       const msg = hasHistory
-        ? '导入将覆盖当前基质数据、待删除暂存区、刷取历史和设置，是否继续？'
-        : '导入将覆盖当前基质数据、待删除暂存区和设置（历史记录保留），是否继续？';
+        ? '导入将覆盖当前基质数据、自定义容量、待删除暂存区、刷取历史和设置，是否继续？'
+        : '导入将覆盖当前基质数据、自定义容量、待删除暂存区和设置（历史记录保留），是否继续？';
       if(!confirm(msg)) return;
       makeSnapshot('导入前');
 
       state.collected = payload.collected || {};
+      state.keyCapacity = (payload.keyCapacity && typeof payload.keyCapacity === 'object') ? payload.keyCapacity : {};
       state.pendingDeletions = payload.pendingDeletions || [];
       if(hasHistory){
         state.history = payload.history || [];
@@ -3478,6 +4051,8 @@ function fixAllValidated(){
 
 function renderAll(){
   invalidateDemandCache();
+  _addSetCache = null;
+  hideCopyPicker();
   renderHeatmap();
   renderBaseProgressRow();
   renderPendingDeletions();
@@ -3493,6 +4068,8 @@ function renderAll(){
   renderSevenDayChart();
   renderHistory();
   closeEditModal();
+  closeQuickAddModal();
+  refreshAllCustomSelects();
 }
 
 function bindEvents(){
@@ -3510,7 +4087,7 @@ function bindEvents(){
     });
   });
 
-    document.getElementById('refreshBtn').addEventListener('click', () => {
+  document.getElementById('refreshBtn').addEventListener('click', () => {
     if(state.exactAlgo){
       withLoadingFeedback(
         document.getElementById('refreshBtn'),
@@ -3542,7 +4119,7 @@ function bindEvents(){
   document.getElementById('celebrationModal').addEventListener('click', e => {
     if(e.target.id === 'celebrationModal') e.currentTarget.classList.remove('show');
   });
-   document.getElementById('inputToggle').addEventListener('click', () => {
+  document.getElementById('inputToggle').addEventListener('click', () => {
     if(!document.documentElement.classList.contains('is-phone')) return;
     const area = document.getElementById('inputArea');
     setInputCollapsed(!area.classList.contains('collapsed'));
@@ -3586,7 +4163,7 @@ function bindEvents(){
     catch (err) { toast('复制失败，请手动选择文本'); }
     document.body.removeChild(ta);
   });
-    document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+  document.getElementById('clearHistoryBtn').addEventListener('click', () => {
     if(!state.history || !state.history.length){ toast('已为空'); return; }
     if(!confirm('清空全部刷取历史？会同时清除热力图的紫色刷取高亮（蓝色/金色修改高亮不受影响）。不影响已收集记录。')) return;
     makeSnapshot('清空历史前');
@@ -3629,14 +4206,45 @@ function bindEvents(){
   const respectToggle = document.getElementById('respectWeaponDemandToggle');
   if(respectToggle){
     respectToggle.addEventListener('change', e => {
-      state.respectWeaponDemand = e.target.checked;
-      saveState();
-      renderSettings();
-      renderRecommend();
-      renderGaps();
-      renderWeapons();
-      renderDetail();
-      toast(state.respectWeaponDemand ? '已开启按武器需求保留' : '已关闭，共用基质只需 1 份');
+      const newVal = e.target.checked;
+      const customKeys = state.keyCapacity ? Object.keys(state.keyCapacity) : [];
+
+      const applyChange = (clearCustom) => {
+        state.respectWeaponDemand = newVal;
+        if(clearCustom) state.keyCapacity = {};
+        saveState();
+        renderSettings();
+        renderRecommend();
+        renderGaps();
+        renderWeapons();
+        renderDetail();
+        toast(state.respectWeaponDemand ? '已开启按武器需求保留' : '已关闭，共用基质只需 1 份');
+      };
+
+      if(customKeys.length > 0){
+        const modal = document.getElementById('customCapModal');
+        const body = document.getElementById('customCapModalBody');
+        body.innerHTML = `<div class="hint">你已为 <b style="color:var(--warn)">${customKeys.length}</b> 个组合设置了自定义保留份数。<br><br>切换「按武器需求保留额外基质」后，这些自定义份数如何处理？</div>`;
+        modal.classList.add('show');
+        const btnKeep = document.getElementById('customCapKeepBtn');
+        const btnClear = document.getElementById('customCapClearBtn');
+        const btnCancel = document.getElementById('customCapCancelBtn');
+        const cleanup = () => {
+          modal.classList.remove('show');
+          btnKeep.onclick = null;
+          btnClear.onclick = null;
+          btnCancel.onclick = null;
+        };
+        btnKeep.onclick = () => { cleanup(); applyChange(false); };
+        btnClear.onclick = () => { cleanup(); applyChange(true); };
+        btnCancel.onclick = () => {
+          cleanup();
+          // 恢复 toggle 状态，不切换
+          respectToggle.checked = state.respectWeaponDemand;
+        };
+      } else {
+        applyChange(false);
+      }
     });
   }
   const extraInput = document.getElementById('extraCopiesInput');
@@ -3681,7 +4289,7 @@ function bindEvents(){
       toast(state.exactAlgo ? '精确算法已开启' : '精确算法已关闭');
     });
   }
-    const ts = document.getElementById('themeSelect');
+  const ts = document.getElementById('themeSelect');
   if(ts){
     ts.addEventListener('change', e => {
       const t = e.target.value;
@@ -3748,14 +4356,265 @@ function bindEvents(){
   ['editBaseLv','editAddLv','editSkillLv'].forEach(id => {
     document.getElementById(id).addEventListener('change', refreshEditCostPreview);
   });
+  document.getElementById('editClearCapBtn').addEventListener('click', () => {
+    document.getElementById('editCustomCapInput').value = '';
+  });
   document.getElementById('editModal').addEventListener('click', e => {
     if(e.target.id === 'editModal') closeEditModal();
   });
+
+  // 快捷录入模态框
+  document.getElementById('quickAddSaveBtn').addEventListener('click', confirmQuickAdd);
+  document.getElementById('quickAddCancelBtn').addEventListener('click', closeQuickAddModal);
+  document.getElementById('quickAddMaxBtn').addEventListener('click', () => {
+    const cfg = state.data.levelConfig;
+    document.getElementById('quickAddBaseLv').value = cfg.base.max;
+    document.getElementById('quickAddAddLv').value = cfg.add.max;
+    document.getElementById('quickAddSkillLv').value = cfg.skill.max;
+    refreshQuickAddCostPreview();
+  });
+  ['quickAddBaseLv','quickAddAddLv','quickAddSkillLv'].forEach(id => {
+    document.getElementById(id).addEventListener('change', refreshQuickAddCostPreview);
+  });
+  document.getElementById('quickAddModal').addEventListener('click', e => {
+    if(e.target.id === 'quickAddModal') closeQuickAddModal();
+  });
+
+  // 点击外部关闭多份浮层
+  document.addEventListener('click', e => {
+    const picker = document.getElementById('copyPicker');
+    if(picker.style.display === 'block'){
+      if(!picker.contains(e.target) && !e.target.closest('td[data-edit-key]')){
+        hideCopyPicker();
+      }
+    }
+  });
+  // 滚动时也关闭
+  document.addEventListener('scroll', () => {
+    if(_copyPickerKey) hideCopyPicker();
+  }, true);
+
+  // 自定义下拉：点击外部关闭
+  document.addEventListener('click', e => {
+    if(!_activeCustomSelect) return;
+    if(_activeCustomSelect.wrapper.contains(e.target)) return;
+    if(e.target.closest('.cs-dropdown')) return;
+    closeCustomDropdown();
+  });
+  // 滚动时关闭（排除下拉自身滚动）
+  document.addEventListener('scroll', e => {
+    if(!_activeCustomSelect) return;
+    if(e.target && _activeCustomSelect.dropdown.contains(e.target)) return;
+    closeCustomDropdown();
+  }, true);
+  // 窗口尺寸变化时关闭
+  window.addEventListener('resize', () => {
+    if(_activeCustomSelect) closeCustomDropdown();
+  });
+
   document.addEventListener('keydown', e => {
     if(e.key !== 'Escape') return;
     if(document.getElementById('editModal').classList.contains('show')) closeEditModal();
+    if(document.getElementById('quickAddModal').classList.contains('show')) closeQuickAddModal();
     if(document.getElementById('targetsModal').classList.contains('show')) closeTargetsModal();
     if(document.getElementById('celebrationModal').classList.contains('show')) document.getElementById('celebrationModal').classList.remove('show');
+    if(document.getElementById('capacityModal').classList.contains('show')) document.getElementById('capacityModal').classList.remove('show');
+    if(document.getElementById('customCapModal').classList.contains('show')) document.getElementById('customCapModal').classList.remove('show');
+    if(_copyPickerKey) hideCopyPicker();
+    if(_activeCustomSelect) closeCustomDropdown();
+  });
+}
+
+/* ============================================================
+ *  自定义下拉
+ * ============================================================ */
+let _activeCustomSelect = null;
+const _csSyncMap = new WeakMap();
+const _csValueDesc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
+const _csDisabledDesc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'disabled');
+
+function enhanceSelect(sel){
+  if(!sel || sel.tagName !== 'SELECT') return;
+  if(sel.dataset.csEnhanced === '1') return;
+  if(sel.closest('.cs-wrapper')) return;
+  sel.dataset.csEnhanced = '1';
+
+  const parent = sel.parentNode;
+  if(!parent) return;
+  const wrapper = document.createElement('div');
+  wrapper.className = 'cs-wrapper';
+  parent.insertBefore(wrapper, sel);
+  wrapper.appendChild(sel);
+
+  const display = document.createElement('div');
+  display.className = 'cs-display';
+  display.tabIndex = 0;
+  display.setAttribute('role', 'combobox');
+  display.setAttribute('aria-haspopup', 'listbox');
+  wrapper.appendChild(display);
+
+  const syncDisplay = () => {
+    const opt = sel.options[sel.selectedIndex];
+    display.textContent = opt ? opt.textContent : '';
+    wrapper.classList.toggle('is-disabled', !!sel.disabled);
+  };
+  syncDisplay();
+  _csSyncMap.set(sel, syncDisplay);
+
+  // 拦截 value / disabled setter，程序动态改时同步显示
+  try {
+    Object.defineProperty(sel, 'value', {
+      configurable: true,
+      get(){ return _csValueDesc.get.call(sel); },
+      set(v){ _csValueDesc.set.call(sel, v); syncDisplay(); }
+    });
+    Object.defineProperty(sel, 'disabled', {
+      configurable: true,
+      get(){ return _csDisabledDesc.get.call(sel); },
+      set(v){ _csDisabledDesc.set.call(sel, v); syncDisplay(); }
+    });
+  } catch(e){
+    console.warn('[cs] setter 拦截失败', e);
+  }
+
+  sel.addEventListener('change', syncDisplay);
+
+  display.addEventListener('click', e => {
+    e.stopPropagation();
+    if(sel.disabled) return;
+    if(_activeCustomSelect && _activeCustomSelect.sel === sel){
+      closeCustomDropdown();
+      return;
+    }
+    openCustomDropdown(sel, wrapper, display);
+  });
+
+  // 键盘：Enter/Space/上下箭头 打开；Esc 关闭
+  display.addEventListener('keydown', e => {
+    if(sel.disabled) return;
+    const isOpen = _activeCustomSelect && _activeCustomSelect.sel === sel;
+    if(!isOpen){
+      if(e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+        e.preventDefault();
+        openCustomDropdown(sel, wrapper, display);
+      }
+      return;
+    }
+    if(e.key === 'Escape'){ e.preventDefault(); closeCustomDropdown(); return; }
+    if(e.key === 'Enter' || e.key === ' '){
+      e.preventDefault();
+      const hovered = _activeCustomSelect.dropdown.querySelector('.cs-option.is-hovered');
+      if(hovered) hovered.click();
+      else closeCustomDropdown();
+      return;
+    }
+    if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+      e.preventDefault();
+      moveHover(e.key === 'ArrowDown' ? 1 : -1);
+      return;
+    }
+  });
+
+  display.addEventListener('blur', () => {
+    // 焦点离开 display 且不在下拉里 → 关闭
+    setTimeout(() => {
+      if(!_activeCustomSelect || _activeCustomSelect.sel !== sel) return;
+      const active = document.activeElement;
+      if(!_activeCustomSelect.dropdown.contains(active) && active !== display){
+        closeCustomDropdown();
+      }
+    }, 0);
+  });
+}
+
+function openCustomDropdown(sel, wrapper, display){
+  closeCustomDropdown();
+  if(!sel.options.length) return;
+
+  const dropdown = document.createElement('div');
+  dropdown.className = 'cs-dropdown';
+
+  Array.from(sel.options).forEach((opt, i) => {
+    const row = document.createElement('div');
+    row.className = 'cs-option' + (i === sel.selectedIndex ? ' is-selected' : '');
+    row.textContent = opt.textContent;
+    row.dataset.value = opt.value;
+    row.addEventListener('mouseenter', () => {
+      dropdown.querySelectorAll('.cs-option.is-hovered').forEach(el => el.classList.remove('is-hovered'));
+      row.classList.add('is-hovered');
+    });
+    row.addEventListener('click', ev => {
+      ev.stopPropagation();
+      sel.value = opt.value;
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+      closeCustomDropdown();
+      display.focus();
+    });
+    dropdown.appendChild(row);
+  });
+
+  document.body.appendChild(dropdown);
+
+  const rect = display.getBoundingClientRect();
+  const dRect = dropdown.getBoundingClientRect();
+  let left = rect.left;
+  let top = rect.bottom + 2;
+  if(left + dRect.width > window.innerWidth - 8){
+    left = window.innerWidth - dRect.width - 8;
+  }
+  if(left < 8) left = 8;
+  if(top + dRect.height > window.innerHeight - 8){
+    top = Math.max(8, rect.top - dRect.height - 2);
+  }
+  dropdown.style.left = left + 'px';
+  dropdown.style.top = top + 'px';
+  dropdown.style.minWidth = rect.width + 'px';
+
+  wrapper.classList.add('is-open');
+  _activeCustomSelect = { sel, wrapper, display, dropdown };
+
+  const selectedRow = dropdown.querySelector('.is-selected');
+  if(selectedRow){
+    selectedRow.classList.add('is-hovered');
+    selectedRow.scrollIntoView({ block: 'nearest' });
+  }
+}
+
+function moveHover(dir){
+  if(!_activeCustomSelect) return;
+  const rows = Array.from(_activeCustomSelect.dropdown.querySelectorAll('.cs-option'));
+  if(!rows.length) return;
+  let idx = rows.findIndex(r => r.classList.contains('is-hovered'));
+  if(idx < 0) idx = rows.findIndex(r => r.classList.contains('is-selected'));
+  if(idx < 0) idx = 0;
+  else idx = Math.max(0, Math.min(rows.length - 1, idx + dir));
+  rows.forEach(r => r.classList.remove('is-hovered'));
+  rows[idx].classList.add('is-hovered');
+  rows[idx].scrollIntoView({ block: 'nearest' });
+}
+
+function closeCustomDropdown(){
+  if(!_activeCustomSelect) return;
+  const { wrapper, dropdown } = _activeCustomSelect;
+  wrapper.classList.remove('is-open');
+  if(dropdown.parentNode) dropdown.parentNode.removeChild(dropdown);
+  _activeCustomSelect = null;
+}
+
+function enhanceAllSelectsIn(root){
+  if(!root) return;
+  if(root.tagName === 'SELECT' && !root.dataset.csEnhanced){
+    enhanceSelect(root);
+    return;
+  }
+  if(!root.querySelectorAll) return;
+  root.querySelectorAll('select:not([data-cs-enhanced])').forEach(enhanceSelect);
+}
+
+function refreshAllCustomSelects(){
+  document.querySelectorAll('select[data-cs-enhanced]').forEach(sel => {
+    const fn = _csSyncMap.get(sel);
+    if(fn) fn();
   });
 }
 
@@ -3833,6 +4692,18 @@ async function bootstrap(){
     applyDeviceClass();
     bindEvents();
     renderAll();
+
+    // 启动自定义下拉：扫描现有 + 监听未来新增
+    enhanceAllSelectsIn(document.body);
+    const _selectObserver = new MutationObserver(muts => {
+      for(const m of muts){
+        for(const node of m.addedNodes){
+          if(node.nodeType !== 1) continue;
+          enhanceAllSelectsIn(node);
+        }
+      }
+    });
+    _selectObserver.observe(document.body, { childList: true, subtree: true });
     initInputCollapse();
 
     let _lastIsPhone = document.documentElement.classList.contains('is-phone');
