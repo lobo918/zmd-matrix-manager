@@ -505,9 +505,9 @@ button.secondary:disabled:hover{background:var(--card3)}
   box-shadow:0 12px 32px rgba(0,0,0,.55), 0 0 0 1px rgba(91,163,255,.18);
   font-size:11.5px;animation:slideUp .12s ease;}
 [data-theme="light"] .copy-picker{box-shadow:0 12px 32px rgba(0,0,0,.18), 0 0 0 1px rgba(59,126,216,.18)}
-.copy-picker-title{font-size:10.5px;color:var(--dim);margin-bottom:6px;letter-spacing:.3px;
+.copy-picker-title{font-size:12.5px;color:var(--text);margin-bottom:8px;letter-spacing:0;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,monospace;
-  text-align:center;font-weight:600;}
+  text-align:center;font-weight:700;}
 .copy-picker-row{display:flex;justify-content:space-between;align-items:center;gap:8px;
   padding:4px 6px;border-radius:var(--radius-sm);transition:background .12s;}
 .copy-picker-row:hover{background:var(--card2);}
@@ -536,7 +536,7 @@ button.secondary:disabled:hover{background:var(--card3)}
 .copy-picker-cap-row{
   display:flex;
   gap:4px;
-  align-items:center;
+  align-items:stretch;
 }
 .copy-picker-cap-row input{
   width:100%;
@@ -546,21 +546,37 @@ button.secondary:disabled:hover{background:var(--card3)}
   background:var(--card);
 }
 .copy-picker-cap-clear{
-  width:26px;
-  height:26px;
+  width:28px;
   padding:0;
   background:var(--bad);
   color:#fff;
   border:none;
   border-radius:var(--radius-sm);
-  font-size:14px;
-  font-weight:700;
   cursor:pointer;
   flex-shrink:0;
-  line-height:1;
   display:flex;
   align-items:center;
   justify-content:center;
+  align-self:stretch;
+  position:relative;
+}
+.copy-picker-cap-clear::before,
+.copy-picker-cap-clear::after{
+  content:'';
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:14px;
+  height:2.5px;
+  background:#fff;
+  border-radius:1.5px;
+  transform-origin:center;
+}
+.copy-picker-cap-clear::before{
+  transform:translate(-50%, -50%) rotate(45deg);
+}
+.copy-picker-cap-clear::after{
+  transform:translate(-50%, -50%) rotate(-45deg);
 }
 .copy-picker-cap-clear:hover{
   background:#d84535;
@@ -2690,7 +2706,7 @@ function showCopyPicker(key, anchorEl){
       <label class="copy-picker-cap-label">自定义保留份数</label>
       <div class="copy-picker-cap-row">
         <input type="number" min="1" max="${MAX_CUSTOM_CAP}" placeholder="跟随全局（${globalCap}）" value="${customVal}" data-cap-input>
-        <button class="copy-picker-cap-clear" data-cap-clear title="清除自定义容量">×</button>
+          <button class="copy-picker-cap-clear" data-cap-clear title="清除自定义容量"></button>
       </div>
     </div>`;
   picker.style.display = 'block';
