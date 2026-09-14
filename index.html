@@ -457,7 +457,21 @@ button.secondary:disabled:hover{background:var(--card3)}
 .weapon-target-btn.active{background:rgba(230,185,92,.15);color:var(--warn);border-color:rgba(230,185,92,.35)}
 .weapon-target-btn.active:hover{background:rgba(240,85,69,.15);color:var(--bad);border-color:rgba(240,85,69,.35)}
 .target-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center}
-.target-row select{padding:5px 8px;font-size:11.5px}
+.target-row select{
+  padding:5px 8px;
+  font-size:11.5px;
+  background:var(--card2);
+  color:var(--text);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  width:100%;
+  font-family:inherit;
+}
+.target-row select:focus{
+  outline:none;
+  border-color:var(--accent);
+  background:var(--card3);
+}
 .target-row button{padding:4px 9px;font-size:13px;line-height:1}
 .rec-targets{margin-top:6px;padding:6px 9px;background:var(--card2);border-radius:var(--radius);font-size:10.5px;line-height:1.6;border:1px solid var(--border)}
 .rec-targets-title{color:var(--text2);margin-bottom:3px;letter-spacing:.3px}
@@ -486,12 +500,13 @@ button.secondary:disabled:hover{background:var(--card3)}
 
 /* 多份展开浮层（覆盖在内容上方，不撑开表格） */
 .copy-picker{position:fixed;z-index:350;background:var(--card);border:1px solid var(--border2);
-  border-radius:var(--radius);padding:6px 8px;min-width:130px;max-width:220px;
+  border-radius:var(--radius);padding:6px 8px;min-width:190px;max-width:240px;
   box-shadow:0 12px 32px rgba(0,0,0,.55), 0 0 0 1px rgba(91,163,255,.18);
   font-size:11.5px;animation:slideUp .12s ease;}
 [data-theme="light"] .copy-picker{box-shadow:0 12px 32px rgba(0,0,0,.18), 0 0 0 1px rgba(59,126,216,.18)}
-.copy-picker-title{font-size:10px;color:var(--dim);margin-bottom:4px;letter-spacing:.3px;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,monospace;}
+.copy-picker-title{font-size:10.5px;color:var(--dim);margin-bottom:6px;letter-spacing:.3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,monospace;
+  text-align:center;font-weight:600;}
 .copy-picker-row{display:flex;justify-content:space-between;align-items:center;gap:8px;
   padding:4px 6px;border-radius:var(--radius-sm);transition:background .12s;}
 .copy-picker-row:hover{background:var(--card2);}
@@ -503,129 +518,97 @@ button.secondary:disabled:hover{background:var(--card3)}
   letter-spacing:.3px;transition:background .12s, border-color .12s;}
 .copy-picker-add:hover{background:rgba(91,163,255,.1);border-color:var(--accent);}
 
-/* ============ 自定义下拉 ============ */
-.cs-wrapper{
-  position:relative;
-  width:100%;
+.copy-picker-cap{
+  margin-top:8px;
+  padding:6px 8px;
+  background:var(--card2);
+  border-radius:var(--radius-sm);
+}
+.copy-picker-cap-label{
+  font-size:10.5px;
+  color:var(--warn);
+  font-weight:700;
+  letter-spacing:.4px;
+  margin-bottom:5px;
   display:block;
 }
-.cs-wrapper > select{
-  position:absolute;
-  top:0;left:0;
-  width:100%;height:100%;
-  opacity:0;
-  pointer-events:none;
+.copy-picker-cap-row{
+  display:flex;
+  gap:4px;
+  align-items:center;
 }
-.cs-display{
-  position:relative;
-  background:var(--card2);
+.copy-picker-cap-row input{
+  width:100%;
+  padding:4px 6px;
+  font-size:11.5px;
+  text-align:center;
+  background:var(--card);
+}
+.copy-picker-cap-clear{
+  width:26px;
+  height:26px;
+  padding:0;
+  background:var(--bad);
+  color:#fff;
+  border:none;
+  border-radius:var(--radius-sm);
+  font-size:14px;
+  font-weight:700;
+  cursor:pointer;
+  flex-shrink:0;
+  line-height:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.copy-picker-cap-clear:hover{
+  background:#d84535;
+}
+
+/* ============ 原生 select 美化（方案 D） ============ */
+select.cs-native{
+  -webkit-appearance:none;
+  -moz-appearance:none;
+  appearance:none;
+  background-color:var(--card2);
   color:var(--text);
   border:1px solid var(--border);
   border-radius:var(--radius-sm);
   padding:5px 24px 5px 8px;
   font-size:11.5px;
   font-family:inherit;
-  line-height:1.45;
+  width:100%;
   cursor:pointer;
-  transition:border-color .15s, background .15s;
-  user-select:none;
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0L5 5L10 0Z' fill='%237c838d'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 8px center;
+  transition:border-color .15s, background-color .15s, box-shadow .15s;
   box-sizing:border-box;
-  min-height:26px;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-  outline:none;
 }
-.cs-display::after{
-  content:'';
-  position:absolute;
-  right:8px;
-  top:50%;
-  margin-top:-2.5px;
-  width:0;
-  height:0;
-  border-left:4px solid transparent;
-  border-right:4px solid transparent;
-  border-top:5px solid var(--dim);
-  transition:transform .15s;
-}
-.cs-wrapper.is-open .cs-display::after{
-  transform:rotate(180deg);
-}
-.cs-wrapper.is-open .cs-display,
-.cs-display:focus-visible{
-  border-color:var(--accent);
-  background:var(--card3);
-  box-shadow:0 0 0 2px rgba(91,163,255,.18);
-}
-[data-theme="light"] .cs-wrapper.is-open .cs-display,
-[data-theme="light"] .cs-display:focus-visible{
-  box-shadow:0 0 0 2px rgba(59,126,216,.18);
-}
-.cs-wrapper.is-disabled .cs-display{
-  opacity:.55;
-  cursor:not-allowed;
-  background:#1a1d22;
-  color:var(--dim);
-}
-[data-theme="light"] .cs-wrapper.is-disabled .cs-display{
-  background:#e5e9ef;
-}
-.cs-display:hover{
+select.cs-native:hover{
   border-color:var(--border2);
 }
-.cs-wrapper.is-open .cs-display:hover{
+select.cs-native:focus{
+  outline:none;
   border-color:var(--accent);
+  background-color:var(--card3);
+  box-shadow:0 0 0 2px rgba(91,163,255,.18);
 }
-html.is-phone .cs-display{
+select.cs-native:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+  background-color:#1a1d22;
+  color:var(--dim);
+}
+[data-theme="light"] select.cs-native:disabled{
+  background-color:#e5e9ef;
+}
+html.is-phone select.cs-native{
   padding:7px 26px 7px 10px;
   font-size:13px;
   min-height:32px;
 }
-.cs-dropdown{
-  position:fixed;
-  z-index:550;
-  background:var(--card);
-  border:1px solid var(--border2);
-  border-radius:var(--radius);
-  padding:4px;
-  box-shadow:0 12px 32px rgba(0,0,0,.55), 0 0 0 1px rgba(91,163,255,.18);
-  max-height:260px;
-  overflow-y:auto;
-  animation:slideUp .12s ease;
-}
-[data-theme="light"] .cs-dropdown{
-  box-shadow:0 12px 32px rgba(0,0,0,.18), 0 0 0 1px rgba(59,126,216,.18);
-}
-.cs-option{
-  padding:5px 10px;
-  font-size:11.5px;
-  color:var(--text2);
-  cursor:pointer;
-  border-radius:var(--radius-sm);
-  transition:background .12s, color .12s;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-.cs-option:hover,
-.cs-option.is-hovered{
-  background:var(--card2);
-  color:var(--text);
-}
-.cs-option.is-selected{
-  color:var(--accent);
-  font-weight:600;
-  background:rgba(91,163,255,.1);
-}
-.cs-option.is-selected:hover,
-.cs-option.is-selected.is-hovered{
-  background:rgba(91,163,255,.18);
-}
-html.is-phone .cs-option{
-  padding:8px 12px;
-  font-size:13px;
-}
+
 </style>
 </head>
 <body>
@@ -917,14 +900,6 @@ html.is-phone .cs-option{
     <div class="edit-row"><label>附加</label><select id="editAddLv"></select></div>
     <div class="edit-row"><label>技能</label><select id="editSkillLv"></select></div>
     <div class="modal-cost" id="editCostPreview"></div>
-    <div class="custom-cap-box">
-      <div class="custom-cap-title">⚙ 自定义保留份数</div>
-      <div class="custom-cap-row">
-        <input type="number" id="editCustomCapInput" min="1" max="5" placeholder="跟随全局">
-        <button id="editClearCapBtn" class="small secondary">清除</button>
-      </div>
-      <div class="hint" style="margin-top:4px;font-size:10px">留空表示跟随全局容量（武器需求 + 额外份数）。自定义范围 1~5，会覆盖全局。</div>
-    </div>
     <div class="modal-actions">
       <button id="editMaxBtn" class="secondary">一键升满</button>
       <button id="editDeleteBtn" class="danger">删除此份</button>
@@ -1972,8 +1947,10 @@ function computeRecommendation(){
 
   if(!state.exactAlgo) return base;
 
+  // 二阶段只在「与第一遍最优候选 targetHits 相同」的候选中评估
+  // 避免覆盖目标优先逻辑
   const topN = first.allCandidates
-    .filter(c => c.blanks > 0)
+    .filter(c => c.blanks > 0 && c.targetHits === first.best.targetHits)
     .sort((a, b) => b.weighted - a.weighted)
     .slice(0, EXACT_ALGO_TOP_N);
 
@@ -2177,57 +2154,15 @@ function confirmCapacityIncrease(items, onResolve){
 }
 
 function adoptRecommendation(rec){
-  // 收集候选会产出的所有 key，找出「已饱和且未设自定义容量」的
-  const candidateKeys = [];
-  if(rec.lockType === 'add'){
-    for(const b of rec.baseCombo){
-      for(const s of rec.site.skills){
-        candidateKeys.push(makeKey(b, rec.lockValue, s));
-      }
-    }
-  } else {
-    for(const b of rec.baseCombo){
-      for(const a of rec.site.adds){
-        candidateKeys.push(makeKey(b, a, rec.lockValue));
-      }
-    }
-  }
-  const saturatedUnsatisfied = candidateKeys.filter(k =>
-    isKeySaturated(k) && !hasCustomCapacity(k)
-  );
-
-  const applyLock = () => {
-    currentLock = {
-      baseCombo: rec.baseCombo.slice(),
-      siteKey: rec.site.key,
-      lockType: rec.lockType,
-      lockValue: rec.lockValue
-    };
-    renderDropForm();
-    setInputCollapsed(false);
-    toast('已应用推荐方案，锁定字段不可更改');
+  currentLock = {
+    baseCombo: rec.baseCombo.slice(),
+    siteKey: rec.site.key,
+    lockType: rec.lockType,
+    lockValue: rec.lockValue
   };
-
-  if(saturatedUnsatisfied.length > 0){
-    const items = saturatedUnsatisfied.map(k => {
-      const [b, a, s] = k.split('|');
-      return { key: k, display: `${b} · ${toShortAdd(a)} · ${s}`, currentCap: getCapacity(k) };
-    });
-    confirmCapacityIncrease(items, (yes) => {
-      if(yes){
-        for(const item of items){
-          const cur = getCapacity(item.key);
-          state.keyCapacity[item.key] = Math.min(MAX_CUSTOM_CAP, cur + 1);
-        }
-        saveState();
-        renderAll();
-        toast(`已为 ${items.length} 个组合增加容量`);
-      }
-      applyLock();
-    });
-  } else {
-    applyLock();
-  }
+  renderDropForm();
+  setInputCollapsed(false);
+  toast('已应用推荐方案，锁定字段不可更改');
 }
 
 function renderPendingDeletions(){
@@ -2714,11 +2649,7 @@ function renderDetail(){
       const key = td.dataset.editKey;
       const arr = getCollectedArr(key);
       if(!arr.length) return;
-      if(arr.length === 1){
-        openEditModal(key, 0);
-      } else {
-        showCopyPicker(key, td);
-      }
+      showCopyPicker(key, td);
     });
   });
   // 空格子点击 → 快捷录入
@@ -2748,10 +2679,19 @@ function showCopyPicker(key, anchorEl){
       <button class="small secondary" data-edit-idx="${idx}">编辑</button>
     </div>`;
   }).join('');
+  const customVal = hasCustomCapacity(key) ? state.keyCapacity[key] : '';
+  const globalCap = getGlobalCapacity(key);
   picker.innerHTML =
     `<div class="copy-picker-title">${b} · ${toShortAdd(a)} · ${s}</div>` +
     rows +
-    `<button class="copy-picker-add" data-quick-add="1">+ 新增基质</button>`;
+    `<button class="copy-picker-add" data-quick-add="1">+ 新增基质</button>` +
+    `<div class="copy-picker-cap">
+      <label class="copy-picker-cap-label">自定义保留份数</label>
+      <div class="copy-picker-cap-row">
+        <input type="number" min="1" max="${MAX_CUSTOM_CAP}" placeholder="跟随全局（${globalCap}）" value="${customVal}" data-cap-input>
+        <button class="copy-picker-cap-clear" data-cap-clear title="清除自定义容量">×</button>
+      </div>
+    </div>`;
   picker.style.display = 'block';
   // 定位：水平居中对齐格子
   const rect = anchorEl.getBoundingClientRect();
@@ -2785,7 +2725,45 @@ function showCopyPicker(key, anchorEl){
       openQuickAddModal(b, a, s);
     });
   }
+  const capInput = picker.querySelector('input[data-cap-input]');
+  if(capInput){
+    capInput.addEventListener('click', e => e.stopPropagation());
+    capInput.addEventListener('keydown', e => {
+      if(e.key === 'Enter'){ e.preventDefault(); capInput.blur(); }
+    });
+    capInput.addEventListener('change', e => {
+      e.stopPropagation();
+      const raw = String(capInput.value || '').trim();
+      if(raw === ''){
+        delete state.keyCapacity[key];
+      } else {
+        const v = parseInt(raw, 10);
+        if(isNaN(v) || v < 1 || v > MAX_CUSTOM_CAP){
+          toast(`自定义容量需在 1~${MAX_CUSTOM_CAP} 之间`);
+          capInput.value = hasCustomCapacity(key) ? state.keyCapacity[key] : '';
+          return;
+        }
+        state.keyCapacity[key] = v;
+      }
+      saveState();
+      capInput.placeholder = `跟随全局（${getGlobalCapacity(key)}）`;
+    });
+  }
+  const capClearBtn = picker.querySelector('button[data-cap-clear]');
+  if(capClearBtn){
+    capClearBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      delete state.keyCapacity[key];
+      saveState();
+      if(capInput){
+        capInput.value = '';
+        capInput.placeholder = `跟随全局（${getGlobalCapacity(key)}）`;
+      }
+      toast('已清除自定义容量');
+    });
+  }
 }
+
 function hideCopyPicker(){
   const picker = document.getElementById('copyPicker');
   if(picker) picker.style.display = 'none';
@@ -2836,14 +2814,6 @@ function openEditModal(key, idx){
   addSel.value = item.addLv;
   skillSel.value = item.skillLv;
   refreshEditCostPreview();
-
-  // 自定义容量输入
-  const capInput = document.getElementById('editCustomCapInput');
-  if(capInput){
-    const custom = state.keyCapacity && state.keyCapacity[key];
-    capInput.value = custom != null ? custom : '';
-    capInput.placeholder = `跟随全局（${getGlobalCapacity(key)}）`;
-  }
 
   document.getElementById('editModal').classList.add('show');
 }
@@ -2957,14 +2927,17 @@ function renderTargetsList(){
     </div>
   `).join('');
 
+  // 直接绑定：更新 _targetsDraft
   box.querySelectorAll('select').forEach(sel => {
-    sel.addEventListener('change', e => {
-      const row = e.target.closest('.target-row');
+    sel.addEventListener('change', function(){
+      const row = this.closest('.target-row');
+      if(!row) return;
       const idx = parseInt(row.dataset.idx, 10);
-      const field = e.target.dataset.field;
-      _targetsDraft[idx][field] = e.target.value;
+      const field = this.dataset.field;
+      if(_targetsDraft[idx]) _targetsDraft[idx][field] = this.value;
     });
   });
+  // 删除行
   box.querySelectorAll('button[data-remove]').forEach(btn => {
     btn.addEventListener('click', e => {
       const idx = parseInt(e.target.dataset.remove, 10);
@@ -2974,6 +2947,7 @@ function renderTargetsList(){
     });
   });
 }
+
 function saveTargets(){
   const valid = _targetsDraft
     .filter(t => t.base && t.add && t.skill)
@@ -3032,22 +3006,6 @@ function saveEditModal(){
   inst.baseLv = baseLv; inst.addLv = addLv; inst.skillLv = skillLv;
   inst.cost = cost; inst.time = Date.now(); inst.from = '手动修改';
   setCollectedArr(currentEditKey, arr);
-
-  // 自定义容量
-  const capInput = document.getElementById('editCustomCapInput');
-  if(capInput){
-    const raw = String(capInput.value || '').trim();
-    if(raw === ''){
-      delete state.keyCapacity[currentEditKey];
-    } else {
-      const v = parseInt(raw, 10);
-      if(isNaN(v) || v < 1 || v > MAX_CUSTOM_CAP){
-        toast(`自定义容量需在 1~${MAX_CUSTOM_CAP} 之间`);
-        return;
-      }
-      state.keyCapacity[currentEditKey] = v;
-    }
-  }
 
   saveState();
   closeEditModal();
@@ -3265,7 +3223,6 @@ function renderWeapons(){
       o.value = t; o.textContent = t;
       ft.appendChild(o);
     });
-    if(_csSyncMap.has(ft)) _csSyncMap.get(ft)();
   }
 
   const fType = ft ? ft.value : '';
@@ -3682,7 +3639,6 @@ function handleSubmitDrop(){
   if(activeTab === 'gaps') renderGaps();
   if(activeTab === 'weapons') renderWeapons();
   if(activeTab === 'history'){ renderSevenDayChart(); renderHistory(); }
-  if(document.documentElement.classList.contains('is-phone')) setInputCollapsed(true);
   let msg = '已提交，新 ' + results.filter(r => r.status === 'new').length + ' 个';
   if(removedTargets.length){
     msg += ` · 目标「${removedTargets.map(t => t.base + '·' + toShortAdd(t.add) + '·' + t.skill).join('，')}」已达成`;
@@ -3771,7 +3727,6 @@ function renderSettings(){
       saveState();
     }
     tb.value = state.tieBreaker || '';
-    if(_csSyncMap.has(tb)) _csSyncMap.get(tb)();
   }
 
   const dd = document.getElementById('doubleDropToggle');
@@ -4356,9 +4311,6 @@ function bindEvents(){
   ['editBaseLv','editAddLv','editSkillLv'].forEach(id => {
     document.getElementById(id).addEventListener('change', refreshEditCostPreview);
   });
-  document.getElementById('editClearCapBtn').addEventListener('click', () => {
-    document.getElementById('editCustomCapInput').value = '';
-  });
   document.getElementById('editModal').addEventListener('click', e => {
     if(e.target.id === 'editModal') closeEditModal();
   });
@@ -4389,28 +4341,6 @@ function bindEvents(){
       }
     }
   });
-  // 滚动时也关闭
-  document.addEventListener('scroll', () => {
-    if(_copyPickerKey) hideCopyPicker();
-  }, true);
-
-  // 自定义下拉：点击外部关闭
-  document.addEventListener('click', e => {
-    if(!_activeCustomSelect) return;
-    if(_activeCustomSelect.wrapper.contains(e.target)) return;
-    if(e.target.closest('.cs-dropdown')) return;
-    closeCustomDropdown();
-  });
-  // 滚动时关闭（排除下拉自身滚动）
-  document.addEventListener('scroll', e => {
-    if(!_activeCustomSelect) return;
-    if(e.target && _activeCustomSelect.dropdown.contains(e.target)) return;
-    closeCustomDropdown();
-  }, true);
-  // 窗口尺寸变化时关闭
-  window.addEventListener('resize', () => {
-    if(_activeCustomSelect) closeCustomDropdown();
-  });
 
   document.addEventListener('keydown', e => {
     if(e.key !== 'Escape') return;
@@ -4421,189 +4351,24 @@ function bindEvents(){
     if(document.getElementById('capacityModal').classList.contains('show')) document.getElementById('capacityModal').classList.remove('show');
     if(document.getElementById('customCapModal').classList.contains('show')) document.getElementById('customCapModal').classList.remove('show');
     if(_copyPickerKey) hideCopyPicker();
-    if(_activeCustomSelect) closeCustomDropdown();
   });
 }
 
 /* ============================================================
- *  自定义下拉
+ *  原生 select 美化
  * ============================================================ */
-let _activeCustomSelect = null;
-const _csSyncMap = new WeakMap();
-const _csValueDesc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
-const _csDisabledDesc = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'disabled');
+const _csSyncMap = new WeakMap();   // 保留空壳，避免别处调用报错
 
 function enhanceSelect(sel){
   if(!sel || sel.tagName !== 'SELECT') return;
   if(sel.dataset.csEnhanced === '1') return;
-  if(sel.closest('.cs-wrapper')) return;
   sel.dataset.csEnhanced = '1';
-
-  const parent = sel.parentNode;
-  if(!parent) return;
-  const wrapper = document.createElement('div');
-  wrapper.className = 'cs-wrapper';
-  parent.insertBefore(wrapper, sel);
-  wrapper.appendChild(sel);
-
-  const display = document.createElement('div');
-  display.className = 'cs-display';
-  display.tabIndex = 0;
-  display.setAttribute('role', 'combobox');
-  display.setAttribute('aria-haspopup', 'listbox');
-  wrapper.appendChild(display);
-
-  const syncDisplay = () => {
-    const opt = sel.options[sel.selectedIndex];
-    display.textContent = opt ? opt.textContent : '';
-    wrapper.classList.toggle('is-disabled', !!sel.disabled);
-  };
-  syncDisplay();
-  _csSyncMap.set(sel, syncDisplay);
-
-  // 拦截 value / disabled setter，程序动态改时同步显示
-  try {
-    Object.defineProperty(sel, 'value', {
-      configurable: true,
-      get(){ return _csValueDesc.get.call(sel); },
-      set(v){ _csValueDesc.set.call(sel, v); syncDisplay(); }
-    });
-    Object.defineProperty(sel, 'disabled', {
-      configurable: true,
-      get(){ return _csDisabledDesc.get.call(sel); },
-      set(v){ _csDisabledDesc.set.call(sel, v); syncDisplay(); }
-    });
-  } catch(e){
-    console.warn('[cs] setter 拦截失败', e);
-  }
-
-  sel.addEventListener('change', syncDisplay);
-
-  display.addEventListener('click', e => {
-    e.stopPropagation();
-    if(sel.disabled) return;
-    if(_activeCustomSelect && _activeCustomSelect.sel === sel){
-      closeCustomDropdown();
-      return;
-    }
-    openCustomDropdown(sel, wrapper, display);
-  });
-
-  // 键盘：Enter/Space/上下箭头 打开；Esc 关闭
-  display.addEventListener('keydown', e => {
-    if(sel.disabled) return;
-    const isOpen = _activeCustomSelect && _activeCustomSelect.sel === sel;
-    if(!isOpen){
-      if(e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown' || e.key === 'ArrowUp'){
-        e.preventDefault();
-        openCustomDropdown(sel, wrapper, display);
-      }
-      return;
-    }
-    if(e.key === 'Escape'){ e.preventDefault(); closeCustomDropdown(); return; }
-    if(e.key === 'Enter' || e.key === ' '){
-      e.preventDefault();
-      const hovered = _activeCustomSelect.dropdown.querySelector('.cs-option.is-hovered');
-      if(hovered) hovered.click();
-      else closeCustomDropdown();
-      return;
-    }
-    if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){
-      e.preventDefault();
-      moveHover(e.key === 'ArrowDown' ? 1 : -1);
-      return;
-    }
-  });
-
-  display.addEventListener('blur', () => {
-    // 焦点离开 display 且不在下拉里 → 关闭
-    setTimeout(() => {
-      if(!_activeCustomSelect || _activeCustomSelect.sel !== sel) return;
-      const active = document.activeElement;
-      if(!_activeCustomSelect.dropdown.contains(active) && active !== display){
-        closeCustomDropdown();
-      }
-    }, 0);
-  });
-}
-
-function openCustomDropdown(sel, wrapper, display){
-  closeCustomDropdown();
-  if(!sel.options.length) return;
-
-  const dropdown = document.createElement('div');
-  dropdown.className = 'cs-dropdown';
-
-  Array.from(sel.options).forEach((opt, i) => {
-    const row = document.createElement('div');
-    row.className = 'cs-option' + (i === sel.selectedIndex ? ' is-selected' : '');
-    row.textContent = opt.textContent;
-    row.dataset.value = opt.value;
-    row.addEventListener('mouseenter', () => {
-      dropdown.querySelectorAll('.cs-option.is-hovered').forEach(el => el.classList.remove('is-hovered'));
-      row.classList.add('is-hovered');
-    });
-    row.addEventListener('click', ev => {
-      ev.stopPropagation();
-      sel.value = opt.value;
-      sel.dispatchEvent(new Event('change', { bubbles: true }));
-      closeCustomDropdown();
-      display.focus();
-    });
-    dropdown.appendChild(row);
-  });
-
-  document.body.appendChild(dropdown);
-
-  const rect = display.getBoundingClientRect();
-  const dRect = dropdown.getBoundingClientRect();
-  let left = rect.left;
-  let top = rect.bottom + 2;
-  if(left + dRect.width > window.innerWidth - 8){
-    left = window.innerWidth - dRect.width - 8;
-  }
-  if(left < 8) left = 8;
-  if(top + dRect.height > window.innerHeight - 8){
-    top = Math.max(8, rect.top - dRect.height - 2);
-  }
-  dropdown.style.left = left + 'px';
-  dropdown.style.top = top + 'px';
-  dropdown.style.minWidth = rect.width + 'px';
-
-  wrapper.classList.add('is-open');
-  _activeCustomSelect = { sel, wrapper, display, dropdown };
-
-  const selectedRow = dropdown.querySelector('.is-selected');
-  if(selectedRow){
-    selectedRow.classList.add('is-hovered');
-    selectedRow.scrollIntoView({ block: 'nearest' });
-  }
-}
-
-function moveHover(dir){
-  if(!_activeCustomSelect) return;
-  const rows = Array.from(_activeCustomSelect.dropdown.querySelectorAll('.cs-option'));
-  if(!rows.length) return;
-  let idx = rows.findIndex(r => r.classList.contains('is-hovered'));
-  if(idx < 0) idx = rows.findIndex(r => r.classList.contains('is-selected'));
-  if(idx < 0) idx = 0;
-  else idx = Math.max(0, Math.min(rows.length - 1, idx + dir));
-  rows.forEach(r => r.classList.remove('is-hovered'));
-  rows[idx].classList.add('is-hovered');
-  rows[idx].scrollIntoView({ block: 'nearest' });
-}
-
-function closeCustomDropdown(){
-  if(!_activeCustomSelect) return;
-  const { wrapper, dropdown } = _activeCustomSelect;
-  wrapper.classList.remove('is-open');
-  if(dropdown.parentNode) dropdown.parentNode.removeChild(dropdown);
-  _activeCustomSelect = null;
+  sel.classList.add('cs-native');
 }
 
 function enhanceAllSelectsIn(root){
   if(!root) return;
-  if(root.tagName === 'SELECT' && !root.dataset.csEnhanced){
+  if(root.tagName === 'SELECT'){
     enhanceSelect(root);
     return;
   }
@@ -4612,11 +4377,14 @@ function enhanceAllSelectsIn(root){
 }
 
 function refreshAllCustomSelects(){
-  document.querySelectorAll('select[data-cs-enhanced]').forEach(sel => {
-    const fn = _csSyncMap.get(sel);
-    if(fn) fn();
-  });
+  // 无需操作：原生 select 会自动同步显示
 }
+
+// 以下函数全部保留为空壳，避免别处调用报错
+function openCustomDropdown(){}
+function closeCustomDropdown(){}
+function moveHover(){}
+let _activeCustomSelect = null;
 
 /* ============================================================
  *  设备识别
