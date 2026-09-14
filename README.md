@@ -46,9 +46,9 @@
 ## 数据存储
 
 - 所有数据存在浏览器 **localStorage**，不上传服务器
-- 主数据 key：`zmd-optimizer-v10`（历史遗留命名，勿改）
+- 主数据 key：`zmd-matrix-manager`
 - 主题偏好 key：`zmd-theme`
-- 快照 key：`zmd-optimizer-v10_snap_<时间戳>`
+- 快照 key：`zmd-matrix-manager_snap_<时间戳>`
 
 **重要**：数据不会跨设备/浏览器同步。换设备需要用「导出 → 导入」。
 
