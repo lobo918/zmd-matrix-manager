@@ -65,5 +65,7 @@
   { "id": "w064", "name": "苦难的尽头", "type": "单手剑", "base": "敏捷", "add": "自然伤害提升", "skill": "迸发", "owner": "提弗洛斯", "category": "大月卡" },
   { "id": "w065", "name": "点心时刻", "type": "单手剑", "base": "力量", "add": "治疗效率提升", "skill": "医疗", "owner": "噗切娜", "category": "专武" },
   { "id": "w066", "name": "玉中身", "type": "双手剑", "base": "智识", "add": "寒冷伤害提升", "skill": "效益", "owner": "祀", "category": "专武" },
-  { "id": "w067", "name": "唤月", "type": "单手剑", "base": "意志", "add": "攻击提升", "skill": "附术", "owner": "明河", "category": "专武" }
+  { "id": "w067", "name": "唤月", "type": "单手剑", "base": "意志", "add": "攻击提升", "skill": "附术", "owner": "明河", "category": "专武" },
+  { "id": "w068", "name": "悠久传承", "type": "双手剑", "base": "智识", "add": "寒冷伤害提升", "skill": "效益", "owner": "祀", "category": "大月卡" },
+  { "id": "w069", "name": "聚合工业", "type": "单手剑", "base": "意志", "add": "电磁伤害提升", "skill": "迸发", "owner": "明河", "category": "大月卡" }
 ]
