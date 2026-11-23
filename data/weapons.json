@@ -67,5 +67,8 @@
   { "id": "w066", "name": "玉中身", "type": "双手剑", "base": "智识", "add": "寒冷伤害提升", "skill": "效益", "owner": "祀", "category": "专武" },
   { "id": "w067", "name": "唤月", "type": "单手剑", "base": "意志", "add": "攻击提升", "skill": "附术", "owner": "明河", "category": "专武" },
   { "id": "w068", "name": "悠久传承", "type": "双手剑", "base": "智识", "add": "寒冷伤害提升", "skill": "效益", "owner": "祀", "category": "大月卡" },
-  { "id": "w069", "name": "聚合工业", "type": "单手剑", "base": "意志", "add": "电磁伤害提升", "skill": "迸发", "owner": "明河", "category": "大月卡" }
+  { "id": "w069", "name": "聚合工业", "type": "单手剑", "base": "意志", "add": "电磁伤害提升", "skill": "迸发", "owner": "明河", "category": "大月卡" },
+  { "id": "w070", "name": "甜美交易", "type": "长柄武器", "base": "力量", "add": "自然伤害提升", "skill": "流转", "owner": "小刻", "category": "专武" },
+  { "id": "w071", "name": "突击流星", "type": "长柄武器", "base": "力量", "add": "终结技充能效率提升", "skill": "迸发", "owner": "小刻", "category": "大月卡" },
+  { "id": "w072", "name": "明日之星", "type": "手铳", "base": "力量", "add": "终结技充能效率提升", "skill": "强攻", "owner": "米米诺", "category": "专武" }
 ]
