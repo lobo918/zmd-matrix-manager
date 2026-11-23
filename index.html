@@ -113,8 +113,6 @@ select:disabled{opacity:.55;cursor:not-allowed;background:#1a1d22;color:var(--di
 [data-theme="light"] .progress-bar{background:#e5e9ef}
 .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#7ab8ff);
   border-radius:3px;transition:width .4s ease, background .3s ease, box-shadow .3s ease;box-shadow:0 0 8px rgba(91,163,255,.4);}
-.progress-fill.sprint{background:linear-gradient(90deg,#e6b95c,#ff9f43);box-shadow:0 0 12px rgba(230,185,92,.6);}
-[data-theme="light"] .progress-fill.sprint{background:linear-gradient(90deg,#c9973a,#e67e22);}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
   background:#2a2f38;color:var(--text);padding:9px 18px;border-radius:8px;
   font-size:12px;z-index:500;opacity:0;transition:opacity .25s, transform .25s;
@@ -686,7 +684,7 @@ html.is-phone select.cs-native{
 
   <div class="card" id="progressCard">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
-      <span style="font-size:11px;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;font-weight:600">全局进度 <span id="sprintPill" class="pill warn" style="display:none;margin-left:4px">⚡ 冲刺</span></span>
+      <span style="font-size:11px;color:var(--text2);letter-spacing:.5px;text-transform:uppercase;font-weight:600">全局进度</span>
 <span style="font-size:12px"><b id="collectedCount" style="color:var(--accent);font-size:14px">0</b> <span style="color:var(--dim)">/</span> <span id="totalCount" style="color:var(--text2)">—</span></span>
     </div>
     <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
@@ -838,11 +836,6 @@ html.is-phone select.cs-native{
   <div class="card">
     <h3><span>推荐算法</span></h3>
     <div class="row">
-      <div class="row-label">冲刺模式（对稀缺组合加权更高）</div>
-      <label class="switch"><input type="checkbox" id="sprintModeToggle"><span class="slider"></span></label>
-    </div>
-    <div class="hint" style="margin-top:6px">开启后，来源较少的组合权重会以平方计入；进度超过 85% 时也会自动启用。</div>
-    <div class="row" style="margin-top:10px">
       <div class="row-label">按武器需求保留额外基质</div>
       <label class="switch"><input type="checkbox" id="respectWeaponDemandToggle"><span class="slider"></span></label>
     </div>
@@ -858,7 +851,7 @@ html.is-phone select.cs-native{
         <option value="">不指定</option>
       </select>
     </div>
-    <div class="hint" style="margin-top:6px">推荐算法出现加权得分与空白数完全相同的候选时，优先选择指定地区的刷取点。</div>
+    <div class="hint" style="margin-top:6px">推荐算法出现空白数完全相同的候选时，优先选择指定地区的刷取点。</div>
     <div class="row" style="margin-top:10px">
       <div class="row-label">默认双倍刷取</div>
       <label class="switch"><input type="checkbox" id="doubleDropToggle"><span class="slider"></span></label>
@@ -992,7 +985,7 @@ html.is-phone select.cs-native{
 /* ============================================================
  *  常量
  * ============================================================ */
-const APP_VERSION = '1.1';
+const APP_VERSION = '1.2';
 const DEFAULT_DATA = {
   baseAttrs: ['敏捷', '力量', '意志', '智识', '主能力'],
   allAddAttrs: [
@@ -1047,7 +1040,6 @@ function defaultState(){
     keyCapacity: {},
     pendingDeletions: [],
     history: [],
-    sprintMode: false,
     extraCopies: 0,
     respectWeaponDemand: true,
     recentHighlightDays: 7,
@@ -1089,7 +1081,7 @@ function loadState(){
       if(!s.keyCapacity || typeof s.keyCapacity !== 'object') s.keyCapacity = {};
       if(!s.pendingDeletions) s.pendingDeletions = [];
       if(!s.history) s.history = [];
-      if(typeof s.sprintMode !== 'boolean') s.sprintMode = false;
+      delete s.sprintMode;   // 旧版本遗留字段，已废弃
       if(typeof s.extraCopies !== 'number') s.extraCopies = 0;
       if(typeof s.respectWeaponDemand !== 'boolean') s.respectWeaponDemand = true;
       if(typeof s.recentHighlightDays !== 'number') s.recentHighlightDays = 7;
@@ -1499,7 +1491,7 @@ function restoreSnapshot(ts){
     if(!restored.keyCapacity || typeof restored.keyCapacity !== 'object') restored.keyCapacity = {};
     if(!restored.pendingDeletions) restored.pendingDeletions = [];
     if(!restored.history) restored.history = [];
-    if(typeof restored.sprintMode !== 'boolean') restored.sprintMode = false;
+    delete restored.sprintMode;
     if(typeof restored.extraCopies !== 'number') restored.extraCopies = 0;
     if(typeof restored.respectWeaponDemand !== 'boolean') restored.respectWeaponDemand = true;
     if(typeof restored.recentHighlightDays !== 'number') restored.recentHighlightDays = 7;
@@ -1591,7 +1583,6 @@ function buildExportPayload(includeHistory){
     enabledSites: state.enabledSites,
     targets: state.targets,
     collapsedRegions: state.collapsedRegions,
-    sprintMode: state.sprintMode,
     extraCopies: state.extraCopies,
     respectWeaponDemand: state.respectWeaponDemand,
     recentHighlightDays: state.recentHighlightDays,
@@ -1778,24 +1769,9 @@ function findUncovered(){
 function computeRecommendationRaw(enabled){
   const baseCombos = combinations(state.data.baseAttrs, 3);
   const srcMap = buildSourceMap(enabled);
-
-  let totalKeys = 0, filledKeys = 0;
-  for(const b of state.data.baseAttrs)
-    for(const a of state.data.allAddAttrs)
-      for(const s of state.data.allSkillAttrs){
-        totalKeys++;
-        if(hasCollected(makeKey(b, a, s))) filledKeys++;
-      }
-  const progress = filledKeys / Math.max(1, totalKeys);
-  const sprintOn = state.sprintMode || progress > 0.85;
-  const alpha = sprintOn ? 2 : 1;
   const tieRegion = state.tieBreaker || '';
   const targets = (state.targets || []).filter(t => t && t.base && t.add && t.skill);
   const hasTargets = targets.length > 0;
-
-  // 源越多权重越低；上界取启用点数，避免 src 超出表长时静默变 0
-  const invPow = [];
-  for(let s = 1; s <= enabled.length; s++) invPow[s] = 1 / Math.pow(s, alpha);
 
   let best = null;
   let anyTargetHit = false;
@@ -1824,14 +1800,13 @@ function computeRecommendationRaw(enabled){
     cand.targetHits = targetHits;
     if(targetHits > 0) anyTargetHit = true;
 
-    // 原地择优：目标命中 > 加权得分 > 空白数 > 优先地区
+    // 原地择优：目标命中 > 空白数 > 优先地区
+    // 24 个槽等概率，空白数就是单次提交的期望新格（×0.1178），所以按空白数排即可
     if(!best){ best = cand; return; }
     if(hasTargets){
       if(cand.targetHits > best.targetHits){ best = cand; return; }
       if(cand.targetHits < best.targetHits) return;
     }
-    if(cand.weighted > best.weighted + 1e-9){ best = cand; return; }
-    if(cand.weighted < best.weighted - 1e-9) return;
     if(cand.blanks > best.blanks){ best = cand; return; }
     if(cand.blanks < best.blanks) return;
     if(tieRegion && cand.site.region === tieRegion && best.site.region !== tieRegion){
@@ -1842,40 +1817,36 @@ function computeRecommendationRaw(enabled){
   for(const site of enabled){
     for(const add of site.adds){
       for(const bc of baseCombos){
-        let weighted = 0, blanks = 0;
+        let blanks = 0;
         for(const b of bc){
           for(const s of site.skills){
             const key = makeKey(b, add, s);
             if(isKeySaturated(key)) continue;
-            const src = getSrc(srcMap, add, s);
-            if(src === 0) continue;
-            weighted += invPow[src] || 0;
+            if(getSrc(srcMap, add, s) === 0) continue;
             blanks++;
           }
         }
-        consider({ site, lockType:'add', lockValue:add, baseCombo:bc, weighted, blanks, total: bc.length * site.skills.length });
+        consider({ site, lockType:'add', lockValue:add, baseCombo:bc, blanks, total: bc.length * site.skills.length });
       }
     }
     for(const skill of site.skills){
       for(const bc of baseCombos){
-        let weighted = 0, blanks = 0;
+        let blanks = 0;
         for(const b of bc){
           for(const a of site.adds){
             const key = makeKey(b, a, skill);
             if(isKeySaturated(key)) continue;
-            const src = getSrc(srcMap, a, skill);
-            if(src === 0) continue;
-            weighted += invPow[src] || 0;
+            if(getSrc(srcMap, a, skill) === 0) continue;
             blanks++;
           }
         }
-        consider({ site, lockType:'skill', lockValue:skill, baseCombo:bc, weighted, blanks, total: bc.length * site.adds.length });
+        consider({ site, lockType:'skill', lockValue:skill, baseCombo:bc, blanks, total: bc.length * site.adds.length });
       }
     }
   }
 
   if(!best) return null;
-  return { best, sprintOn, hasTargets, targets, anyTargetHit };
+  return { best, hasTargets, targets, anyTargetHit };
 }
 
 function computeRecommendation(){
@@ -1887,7 +1858,6 @@ function computeRecommendation(){
 
   return {
     ...first.best,
-    sprintOn: first.sprintOn,
     hasTargets: first.hasTargets,
     targets: first.targets,
     anyTargetHit: first.anyTargetHit
@@ -1963,7 +1933,6 @@ function renderRecommend(forceFlash){
   const warnHtml = uncovered.length
     ? `<div class="uncov-warn">⚠ 有 <b>${uncovered.length}</b> 个空白组合当前启用点无法产出（见「缺口清单」）。</div>`
     : '';
-  const sprintTag = rec.sprintOn ? '<span class="pill warn">冲刺</span>' : '';
 
   const targetWarn = (rec.hasTargets && !rec.anyTargetHit)
     ? '<div class="uncov-warn">⚠ 所有候选都产出 <b>0</b> 个目标，已退化为纯全收集推荐。请检查目标或启用更多刷取点。</div>'
@@ -1978,14 +1947,13 @@ function renderRecommend(forceFlash){
 
   body.innerHTML = `
     <div class="rec-region">${rec.site.region}</div>
-    <div class="rec-site">${rec.site.name}${sprintTag}</div>
+    <div class="rec-site">${rec.site.name}</div>
     <div class="rec-lock-row"><span class="rec-lock-key">${lockLabel}</span><span class="rec-lock-val">${lockValDisplay}</span></div>
     <div class="rec-lock-row"><span class="rec-lock-key">锁基础</span><span class="rec-lock-val">${rec.baseCombo.join(' · ')}</span></div>
     ${targetBlock}
     <div class="rec-stats">
       空白命中 <b>${pct}%</b>（${rec.blanks}/${rec.total}）<br>
-      加权得分 <b>${rec.weighted.toFixed(2)}</b><br>
-      期望不同空白：普通 <span class="ok">${exp3}</span> · 双倍 <span class="ok">${exp6}</span>
+      本次提交预计新格：普通 <span class="ok">${exp3}</span> · 双倍 <span class="ok">${exp6}</span>
     </div>
     ${targetWarn}
     ${warnHtml}
@@ -2175,7 +2143,7 @@ function etaRunTrajectory(m){
   let B = m.B;
   let subs = 0;
   while(B > 0){
-    // 选空白最多的窗口（与原推荐同口径；加权项实测无差别，这里省掉）
+    // 选空白最多的窗口（与推荐同口径）
     let best = -1, bm = 0;
     for(let w = 0; w < wb.length; w++){
       const v = wb[w];
@@ -2444,20 +2412,6 @@ function renderProgress(){
   document.getElementById('totalCount').textContent = total;
   document.getElementById('progressFill').style.width = (count / total * 100).toFixed(2) + '%';
   document.getElementById('progressPill').textContent = `${count} / ${total}`;
-
-  const progress = count / total;
-  const sprintOn = state.sprintMode || progress > 0.85;
-  const fill = document.getElementById('progressFill');
-  if(fill) fill.classList.toggle('sprint', sprintOn);
-  const sprintPill = document.getElementById('sprintPill');
-  if(sprintPill){
-    if(sprintOn){
-      sprintPill.style.display = 'inline-block';
-      sprintPill.textContent = state.sprintMode ? '⚡ 冲刺' : '⚡ 冲刺（85%+）';
-    } else {
-      sprintPill.style.display = 'none';
-    }
-  }
 
   checkCelebration(count, total);
 
@@ -3698,9 +3652,6 @@ function renderSettings(){
     saveState(); renderSettings(); renderRecommend(); renderGaps();
   }));
 
-  const sprint = document.getElementById('sprintModeToggle');
-  if(sprint) sprint.checked = !!state.sprintMode;
-
   const respectToggle = document.getElementById('respectWeaponDemandToggle');
   if(respectToggle) respectToggle.checked = !!state.respectWeaponDemand;
 
@@ -3802,7 +3753,6 @@ function handleImport(file){
       if(payload.enabledSites) state.enabledSites = payload.enabledSites;
       if(Array.isArray(payload.targets)) state.targets = payload.targets;
       if(payload.collapsedRegions && typeof payload.collapsedRegions === 'object') state.collapsedRegions = payload.collapsedRegions;
-      if(typeof payload.sprintMode === 'boolean') state.sprintMode = payload.sprintMode;
       if(typeof payload.extraCopies === 'number') state.extraCopies = payload.extraCopies;
       if(typeof payload.respectWeaponDemand === 'boolean') state.respectWeaponDemand = payload.respectWeaponDemand;
       if(typeof payload.recentHighlightDays === 'number') state.recentHighlightDays = payload.recentHighlightDays;
@@ -4146,11 +4096,6 @@ function bindEvents(){
   document.getElementById('weaponRefreshBtn').addEventListener('click', renderWeapons);
   ['weaponFilterType','weaponFilterCategory','weaponFilterStatus'].forEach(id => {
     document.getElementById(id).addEventListener('change', renderWeapons);
-  });
-  document.getElementById('sprintModeToggle').addEventListener('change', e => {
-    state.sprintMode = e.target.checked;
-    saveState(); renderRecommend();
-    toast(state.sprintMode ? '冲刺模式已开启' : '冲刺模式已关闭');
   });
   const respectToggle = document.getElementById('respectWeaponDemandToggle');
   if(respectToggle){

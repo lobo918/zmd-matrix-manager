@@ -40,7 +40,6 @@
   "enabledSites": { ... },
   "targets": [ ... ],
   "collapsedRegions": { ... },
-  "sprintMode": false,
   "extraCopies": 0,
   "respectWeaponDemand": true,
   "recentHighlightDays": 7,
@@ -126,7 +125,6 @@
 | `enabledSites` | object | `{}` | 刷取点开关 |
 | `targets` | array | `[]` | 定向刷取目标 |
 | `collapsedRegions` | object | `{}` | 地区折叠状态 |
-| `sprintMode` | bool | `false` | 冲刺模式 |
 | `extraCopies` | number | `0` | 额外保留份数（0~5） |
 | `respectWeaponDemand` | bool | `true` | 是否按武器需求保留 |
 | `recentHighlightDays` | number | `7` | 近期高亮天数（0~30，0 关闭） |
