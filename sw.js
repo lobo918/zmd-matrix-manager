@@ -1,4 +1,4 @@
-const CACHE_NAME = 'zmd-matrix-v1.0';
+const CACHE_NAME = 'zmd-matrix-v1.1';
 const PRECACHE_URLS = [
   './',
   './index.html',

@@ -46,7 +46,6 @@
   "recentHighlightDays": 7,
   "tieBreaker": "",
   "doubleDrop": false,
-  "exactAlgo": false,
   "history": [ ... ]
 }
 ```
@@ -133,7 +132,6 @@
 | `recentHighlightDays` | number | `7` | 近期高亮天数（0~30，0 关闭） |
 | `tieBreaker` | string | `""` | 平分优先地区名，空表示不指定 |
 | `doubleDrop` | bool | `false` | 默认双倍刷取 |
-| `exactAlgo` | bool | `false` | 精确算法（2 步前瞻） |
 | `history` | array | 见下 | 刷取历史 |
 
 ### `pendingDeletions`
@@ -241,6 +239,8 @@
 | `"dup"` | `false` | 丢弃，未进入任何数据 | 否 |
 
 **`iid`**：对应 `collected` 里新实例的 `iid`。用于撤销时定位。
+
+**`replacedIid`**（可选）：`status: "dup"` 且 `keep: true` 时，被替换掉的旧份的 `iid`，撤销时用它精确定位 `pendingDeletions` 里的条目。旧版本导出的历史没有这个字段，撤销时退回用 `key + time` 匹配。
 
 ## 版本兼容性
 

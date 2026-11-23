@@ -228,12 +228,6 @@ html.is-phone .matrix-item .matrix-line{grid-template-columns:2fr 1fr;}
 .main-right > .card:first-child{flex:1 1 0;min-height:180px;max-height:260px;display:flex;flex-direction:column;padding:9px 11px;overflow:hidden;}
 .main-right > .card:first-child h3{margin:0 0 6px;flex-shrink:0}
 .rec-body{flex:1 1 auto;overflow-y:auto;min-height:0;line-height:1.4;position:relative}
-.rec-body.loading{opacity:.35;transition:opacity .15s}
-.rec-body.loading::after{
-  content:'计算中…';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-  font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.5px;pointer-events:none;white-space:nowrap;
-  text-shadow:0 0 8px var(--bg),0 0 16px var(--bg);
-}
 @keyframes recFlash{
   0%   { box-shadow: 0 0 0 0 rgba(91,163,255,.6); }
   100% { box-shadow: 0 0 0 16px rgba(91,163,255,0); }
@@ -729,7 +723,7 @@ html.is-phone select.cs-native{
         <button id="gapRefreshBtn" class="small secondary">刷新</button>
       </span>
     </h3>
-    <div class="hint" style="margin-bottom:8px">按稀缺度升序：来源 1 表示当前只有 1 个启用点能产出，最优先补。</div>
+    <div class="hint" style="margin-bottom:8px">按 基础 → 附加 → 技能 的固定顺序排列。徽标「来源 N」＝当前能产出该组合的启用点数（只说明可选余地，不代表更难刷）。</div>
     <div class="detail-filters" style="grid-template-columns:repeat(4,1fr)">
       <div><label class="lbl">基础</label><select id="gapFilterBase"><option value="">全部</option></select></div>
       <div><label class="lbl">附加</label><select id="gapFilterAdd"><option value="">全部</option></select></div>
@@ -870,11 +864,6 @@ html.is-phone select.cs-native{
       <label class="switch"><input type="checkbox" id="doubleDropToggle"><span class="slider"></span></label>
     </div>
     <div class="hint" style="margin-top:6px">开启后，主界面「数量」默认选中 6（双倍）。可在录入区临时切换，不影响本设置。</div>
-    <div class="row" style="margin-top:10px">
-      <div class="row-label">精确算法（2 步前瞻）</div>
-      <label class="switch"><input type="checkbox" id="exactAlgoToggle"><span class="slider"></span></label>
-    </div>
-    <div class="hint" style="margin-top:6px">开启后按当前「默认双倍」设置模拟掉落份数，对 Top-30 候选做第二步评估。计算约需 0.3~0.5 秒。</div>
   </div>
 
   <div class="card">
@@ -1003,7 +992,7 @@ html.is-phone select.cs-native{
 /* ============================================================
  *  常量
  * ============================================================ */
-const APP_VERSION = '1.0';
+const APP_VERSION = '1.1';
 const DEFAULT_DATA = {
   baseAttrs: ['敏捷', '力量', '意志', '智识', '主能力'],
   allAddAttrs: [
@@ -1041,11 +1030,7 @@ const SNAPSHOT_PREFIX = STORAGE_KEY + '_snap_';
 const SNAPSHOT_MAX = 3;
 const EXPORT_REMIND_DAYS = 7;
 const STORAGE_WARN_BYTES = 4 * 1024 * 1024;
-const EXACT_ALGO_TOP_N = 30;
-const SECOND_PASS_DISCOUNT = 0.5;
 const HISTORY_PAGE_SIZE = 20;
-const ETA_BATCH_SIZE = 60;
-const ETA_MAX_ITER = 60;
 const MAX_CUSTOM_CAP = 5;
 const deepClone = o => JSON.parse(JSON.stringify(o));
 
@@ -1068,7 +1053,6 @@ function defaultState(){
     recentHighlightDays: 7,
     tieBreaker: '',
     doubleDrop: false,
-    exactAlgo: false,
     collapsedRegions: {},
     targets: [],
     weapons: deepClone(EXT_WEAPONS)
@@ -1111,7 +1095,7 @@ function loadState(){
       if(typeof s.recentHighlightDays !== 'number') s.recentHighlightDays = 7;
       if(typeof s.tieBreaker !== 'string') s.tieBreaker = '';
       if(typeof s.doubleDrop !== 'boolean') s.doubleDrop = false;
-      if(typeof s.exactAlgo !== 'boolean') s.exactAlgo = false;
+      delete s.exactAlgo;   // 旧版本遗留字段，已废弃
       if(!s.collapsedRegions || typeof s.collapsedRegions !== 'object') s.collapsedRegions = {};
       if(!Array.isArray(s.targets)) s.targets = [];
       if(s.tieBreaker && !s.data.regions.some(r => r.name === s.tieBreaker)) s.tieBreaker = '';
@@ -1128,7 +1112,6 @@ let currentEditKey = null;
 let currentEditIndex = 0;
 let currentRec = null;
 let _demandCache = null;
-let _collectedView = null;
 let _lastGapList = [];
 let _historyPage = 1;
 let _quickAddTarget = null;
@@ -1203,8 +1186,7 @@ function hasCustomCapacity(key){
   return !!(state.keyCapacity && state.keyCapacity[key] != null);
 }
 function getCollectedArr(key){
-  const c = _collectedView || state.collected;
-  const v = c[key];
+  const v = state.collected[key];
   if(!v) return [];
   return Array.isArray(v) ? v : [v];
 }
@@ -1523,7 +1505,7 @@ function restoreSnapshot(ts){
     if(typeof restored.recentHighlightDays !== 'number') restored.recentHighlightDays = 7;
     if(typeof restored.tieBreaker !== 'string') restored.tieBreaker = '';
     if(typeof restored.doubleDrop !== 'boolean') restored.doubleDrop = false;
-    if(typeof restored.exactAlgo !== 'boolean') restored.exactAlgo = false;
+    delete restored.exactAlgo;
     if(!restored.collapsedRegions || typeof restored.collapsedRegions !== 'object') restored.collapsedRegions = {};
     if(!Array.isArray(restored.targets)) restored.targets = [];
     state = restored;
@@ -1614,8 +1596,7 @@ function buildExportPayload(includeHistory){
     respectWeaponDemand: state.respectWeaponDemand,
     recentHighlightDays: state.recentHighlightDays,
     tieBreaker: state.tieBreaker,
-    doubleDrop: state.doubleDrop,
-    exactAlgo: state.exactAlgo
+    doubleDrop: state.doubleDrop
   };
   if(includeHistory) payload.history = state.history;
   return payload;
@@ -1812,10 +1793,11 @@ function computeRecommendationRaw(enabled){
   const targets = (state.targets || []).filter(t => t && t.base && t.add && t.skill);
   const hasTargets = targets.length > 0;
 
-  const invPow = {};
-  for(let s = 1; s <= 12; s++) invPow[s] = 1 / Math.pow(s, alpha);
+  // 源越多权重越低；上界取启用点数，避免 src 超出表长时静默变 0
+  const invPow = [];
+  for(let s = 1; s <= enabled.length; s++) invPow[s] = 1 / Math.pow(s, alpha);
 
-  const allCandidates = [];
+  let best = null;
   let anyTargetHit = false;
 
   const consider = (cand) => {
@@ -1841,7 +1823,20 @@ function computeRecommendationRaw(enabled){
     }
     cand.targetHits = targetHits;
     if(targetHits > 0) anyTargetHit = true;
-    allCandidates.push(cand);
+
+    // 原地择优：目标命中 > 加权得分 > 空白数 > 优先地区
+    if(!best){ best = cand; return; }
+    if(hasTargets){
+      if(cand.targetHits > best.targetHits){ best = cand; return; }
+      if(cand.targetHits < best.targetHits) return;
+    }
+    if(cand.weighted > best.weighted + 1e-9){ best = cand; return; }
+    if(cand.weighted < best.weighted - 1e-9) return;
+    if(cand.blanks > best.blanks){ best = cand; return; }
+    if(cand.blanks < best.blanks) return;
+    if(tieRegion && cand.site.region === tieRegion && best.site.region !== tieRegion){
+      best = cand;
+    }
   };
 
   for(const site of enabled){
@@ -1879,129 +1874,23 @@ function computeRecommendationRaw(enabled){
     }
   }
 
-  let best = null;
-  for(const cand of allCandidates){
-    if(!best){ best = cand; continue; }
-    if(hasTargets){
-      if(cand.targetHits > best.targetHits){ best = cand; continue; }
-      if(cand.targetHits < best.targetHits) continue;
-    }
-    if(cand.weighted > best.weighted + 1e-9){ best = cand; continue; }
-    if(cand.weighted < best.weighted - 1e-9) continue;
-    if(cand.blanks > best.blanks){ best = cand; continue; }
-    if(cand.blanks < best.blanks) continue;
-    if(tieRegion && cand.site.region === tieRegion && best.site.region !== tieRegion){
-      best = cand;
-    }
-  }
   if(!best) return null;
-  return { best, allCandidates, sprintOn, hasTargets, targets, anyTargetHit };
-}
-
-function simulateOutcome(cand){
-  const sim = {};
-  for(const k in state.collected){
-    const v = state.collected[k];
-    sim[k] = Array.isArray(v) ? v.slice() : [v];
-  }
-  const dropCount = state.doubleDrop ? 6 : 3;
-  const makeMaster = () => ({
-    baseLv: 6, addLv: 6, skillLv: 3, cost: 0,
-    iid: 'sim_' + Math.random().toString(36).slice(2,7),
-    time: 0, from: 'sim'
-  });
-
-  const srcMap = buildSourceMap(getAllSites().filter(s => isSiteEnabled(s.key)));
-  const alpha = (state.sprintMode || false) ? 2 : 1;
-  const combos = [];
-  if(cand.lockType === 'add'){
-    for(const b of cand.baseCombo){
-      for(const s of cand.site.skills){
-        const key = makeKey(b, cand.lockValue, s);
-        if(!sim[key]) sim[key] = [];
-        if(sim[key].length < getCapacity(key)){
-          const src = getSrc(srcMap, cand.lockValue, s) || 1;
-          combos.push({ key, weight: 1 / Math.pow(src, alpha) });
-        }
-      }
-    }
-  } else {
-    for(const b of cand.baseCombo){
-      for(const a of cand.site.adds){
-        const key = makeKey(b, a, cand.lockValue);
-        if(!sim[key]) sim[key] = [];
-        if(sim[key].length < getCapacity(key)){
-          const src = getSrc(srcMap, a, cand.lockValue) || 1;
-          combos.push({ key, weight: 1 / Math.pow(src, alpha) });
-        }
-      }
-    }
-  }
-  combos.sort((a, b) => b.weight - a.weight);
-
-  const top = combos.slice(0, dropCount);
-  for(const c of top){
-    sim[c.key].push(makeMaster());
-  }
-
-  return sim;
+  return { best, sprintOn, hasTargets, targets, anyTargetHit };
 }
 
 function computeRecommendation(){
   const enabled = getAllSites().filter(s => isSiteEnabled(s.key));
   if(!enabled.length) return null;
 
-  _collectedView = null;
   const first = computeRecommendationRaw(enabled);
   if(!first) return null;
 
-  const base = {
+  return {
     ...first.best,
     sprintOn: first.sprintOn,
     hasTargets: first.hasTargets,
     targets: first.targets,
     anyTargetHit: first.anyTargetHit
-  };
-
-  if(!state.exactAlgo) return base;
-
-  // 二阶段只在「与第一遍最优候选 targetHits 相同」的候选中评估
-  // 避免覆盖目标优先逻辑
-  const topN = first.allCandidates
-    .filter(c => c.blanks > 0 && c.targetHits === first.best.targetHits)
-    .sort((a, b) => b.weighted - a.weighted)
-    .slice(0, EXACT_ALGO_TOP_N);
-
-  let bestCand = first.best;
-  let bestScore = first.best.weighted;
-  let secondInfo = null;
-
-  for(const cand of topN){
-    _collectedView = simulateOutcome(cand);
-    const second = computeRecommendationRaw(enabled);
-    _collectedView = null;
-    if(!second) continue;
-    const score = cand.weighted + SECOND_PASS_DISCOUNT * second.best.weighted;
-    if(score > bestScore + 1e-9){
-      bestScore = score;
-      bestCand = cand;
-      secondInfo = second.best;
-    }
-  }
-
-  return {
-    ...base,
-    site: bestCand.site,
-    lockType: bestCand.lockType,
-    lockValue: bestCand.lockValue,
-    baseCombo: bestCand.baseCombo,
-    weighted: bestCand.weighted,
-    blanks: bestCand.blanks,
-    total: bestCand.total,
-    targetHits: bestCand.targetHits,
-    exactAlgo: true,
-    secondPass: secondInfo,
-    combinedScore: bestScore
   };
 }
 
@@ -2018,28 +1907,6 @@ function flashRecommendCard(){
   card.classList.add('rec-flash');
   clearTimeout(card._flashTimer);
   card._flashTimer = setTimeout(() => card.classList.remove('rec-flash'), 950);
-}
-
-function withLoadingFeedback(btn, bodyEl, task){
-  const MIN_MS = 250;
-  const t0 = performance.now();
-  btn.disabled = true;
-  const origText = btn.textContent;
-  btn.textContent = '计算中…';
-  bodyEl.classList.add('loading');
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      const wait = Math.max(0, MIN_MS - (performance.now() - t0));
-      setTimeout(() => {
-        try { task(); }
-        finally {
-          btn.disabled = false;
-          btn.textContent = origText;
-          bodyEl.classList.remove('loading');
-        }
-      }, wait);
-    });
-  });
 }
 
 function renderRecommend(forceFlash){
@@ -2085,7 +1952,9 @@ function renderRecommend(forceFlash){
   }
 
   const pct = (rec.blanks / rec.total * 100).toFixed(1);
-  const expUnique = (m, k) => (m * (1 - Math.pow(1 - 1/24, k))).toFixed(2);
+  // 单次掉落落在这 24 个槽里的概率 = 1/该候选的槽位总数
+  const slotSpace = rec.total || 24;
+  const expUnique = (m, k) => (m * (1 - Math.pow(1 - 1/slotSpace, k))).toFixed(2);
   const exp3 = expUnique(rec.blanks, 3);
   const exp6 = expUnique(rec.blanks, 6);
   const lockLabel = rec.lockType === 'add' ? '锁附加' : '锁技能';
@@ -2095,7 +1964,6 @@ function renderRecommend(forceFlash){
     ? `<div class="uncov-warn">⚠ 有 <b>${uncovered.length}</b> 个空白组合当前启用点无法产出（见「缺口清单」）。</div>`
     : '';
   const sprintTag = rec.sprintOn ? '<span class="pill warn">冲刺</span>' : '';
-  const exactTag = rec.exactAlgo ? '<span class="pill ok">精确</span>' : '';
 
   const targetWarn = (rec.hasTargets && !rec.anyTargetHit)
     ? '<div class="uncov-warn">⚠ 所有候选都产出 <b>0</b> 个目标，已退化为纯全收集推荐。请检查目标或启用更多刷取点。</div>'
@@ -2110,13 +1978,13 @@ function renderRecommend(forceFlash){
 
   body.innerHTML = `
     <div class="rec-region">${rec.site.region}</div>
-    <div class="rec-site">${rec.site.name}${sprintTag}${exactTag}</div>
+    <div class="rec-site">${rec.site.name}${sprintTag}</div>
     <div class="rec-lock-row"><span class="rec-lock-key">${lockLabel}</span><span class="rec-lock-val">${lockValDisplay}</span></div>
     <div class="rec-lock-row"><span class="rec-lock-key">锁基础</span><span class="rec-lock-val">${rec.baseCombo.join(' · ')}</span></div>
     ${targetBlock}
     <div class="rec-stats">
       空白命中 <b>${pct}%</b>（${rec.blanks}/${rec.total}）<br>
-      加权得分 <b>${rec.weighted.toFixed(2)}</b>${rec.exactAlgo ? ` · 两步综合 <b>${rec.combinedScore.toFixed(2)}</b>` : ''}<br>
+      加权得分 <b>${rec.weighted.toFixed(2)}</b><br>
       期望不同空白：普通 <span class="ok">${exp3}</span> · 双倍 <span class="ok">${exp6}</span>
     </div>
     ${targetWarn}
@@ -2201,159 +2069,215 @@ function renderPendingDeletions(){
 }
 
 /* ============================================================
- *  ETA 分段模拟
+ *  ETA：蒙特卡洛模拟
+ *  规则：每次提交选「空白最多的窗口」，在该窗口的槽位里等概率抽
+ *  3 次（双倍 6 次），抽到未满的槽即收下；跑 N 条完整轨迹取中位。
+ *  槽位一律用整数索引，避免循环里做字符串拼接。
  * ============================================================ */
+const ETA_TRAJ_TARGET = 64;   // 目标轨迹数（取中位，跑得越多越稳）
+const ETA_TRAJ_BATCH = 4;     // 每个时间片跑的轨迹数，避免卡界面
+
+let _etaTimer = null;
+let _etaJob = null;
 let _etaCache = null;
 let _etaCacheKey = '';
-let _etaTimer = null;
 
+// 缓存键：把状态内容折成 32 位散列，避免"数量没变就复用"的串味
 function computeEtaCacheKey(){
-  let collectedCount = 0;
-  let saturatedCount = 0;
-  for(const k in state.collected){
-    const arr = getCollectedArr(k);
-    if(arr.length){
-      collectedCount++;
-      if(arr.some(x => x.cost <= 0)) saturatedCount++;
+  let h = 2166136261;
+  const add = (str) => {
+    for(let i = 0; i < str.length; i++){
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
     }
-  }
-  const enabledKeys = getAllSites()
-    .filter(s => isSiteEnabled(s.key))
-    .map(s => s.key)
-    .sort()
-    .join(',');
-  return [
-    collectedCount,
-    saturatedCount,
-    state.respectWeaponDemand ? 1 : 0,
-    state.extraCopies || 0,
-    Object.keys(state.keyCapacity || {}).length,
-    state.doubleDrop ? 1 : 0,
-    state.sprintMode ? 1 : 0,
-    state.tieBreaker || '',
-    enabledKeys
-  ].join('|');
+  };
+  for(const k of Object.keys(state.collected).sort()) add(k + ':' + getCollectedArr(k).length + ';');
+  add('|cap:' + JSON.stringify(state.keyCapacity || {}));
+  add('|rwd:' + (state.respectWeaponDemand ? 1 : 0) + '|ex:' + (state.extraCopies || 0) + '|dd:' + (state.doubleDrop ? 1 : 0));
+  add('|sites:' + getAllSites().filter(s => isSiteEnabled(s.key)).map(s => s.key).sort().join(','));
+  return h >>> 0;
 }
 
-function fillSimFromCandidate(sim, cand, maxFill, srcMap, alpha){
-  const list = [];
-  if(cand.lockType === 'add'){
-    for(const b of cand.baseCombo){
-      for(const s of cand.site.skills){
-        const key = makeKey(b, cand.lockValue, s);
-        if(!sim[key]) sim[key] = [];
-        if(sim[key].length < getCapacity(key)){
-          const src = getSrc(srcMap, cand.lockValue, s) || 1;
-          list.push({ key, weight: 1 / Math.pow(src, alpha) });
-        }
-      }
-    }
-  } else {
-    for(const b of cand.baseCombo){
-      for(const a of cand.site.adds){
-        const key = makeKey(b, a, cand.lockValue);
-        if(!sim[key]) sim[key] = [];
-        if(sim[key].length < getCapacity(key)){
-          const src = getSrc(srcMap, a, cand.lockValue) || 1;
-          list.push({ key, weight: 1 / Math.pow(src, alpha) });
-        }
+// 把当前状态编译成模拟用的紧凑结构
+function buildEtaModel(){
+  const bases = state.data.baseAttrs;
+  const adds = state.data.allAddAttrs;
+  const skills = state.data.allSkillAttrs;
+  const NB = bases.length, NA = adds.length, NS = skills.length;
+  const id = (b, a, s) => (b * NA + a) * NS + s;
+  const NK = NB * NA * NS;
+
+  const copies = new Uint8Array(NK);
+  const caps = new Uint8Array(NK);
+  for(let b = 0; b < NB; b++){
+    for(let a = 0; a < NA; a++){
+      for(let s = 0; s < NS; s++){
+        const i = id(b, a, s);
+        const key = makeKey(bases[b], adds[a], skills[s]);
+        copies[i] = Math.min(255, getCollectedArr(key).length);
+        caps[i] = getCapacity(key);
       }
     }
   }
-  list.sort((a, b) => b.weight - a.weight);
-  const take = Math.min(maxFill, list.length);
-  for(let i = 0; i < take; i++){
-    sim[list[i].key].push({
-      baseLv: 6, addLv: 6, skillLv: 3, cost: 0,
-      iid: 'eta_' + i + '_' + Math.random().toString(36).slice(2, 6),
-      time: 0, from: 'eta'
-    });
-  }
-  return take;
-}
 
-function doEstimateRemainingDrops(){
-  const enabled = getAllSites().filter(s => isSiteEnabled(s.key));
+  const enabled = getAllSites().filter(x => isSiteEnabled(x.key));
   if(!enabled.length) return null;
 
-  const total = totalCombinations();
-  let collectedCount = 0;
-  for(const k in state.collected){
-    if(getCollectedArr(k).length > 0) collectedCount++;
-  }
-  let remain = total - collectedCount;
-  if(remain <= 0) return { drops: 0, remain: 0, iter: 0, converged: true };
+  const combos = combinations(bases, 3).map(c => c.map(v => bases.indexOf(v)));
+  if(!combos.length) return null;
 
-  const sim = {};
-  for(const k in state.collected){
-    const arr = getCollectedArr(k);
-    if(arr.length) sim[k] = arr.slice();
-  }
-
-  const dropCount = state.doubleDrop ? 6 : 3;
-  const pHit = 1 - Math.pow(1 - 1/24, dropCount);
-  const alpha = state.sprintMode ? 2 : 1;
-  const srcMap = buildSourceMap(enabled);
-
-  let drops = 0;
-  let iter = 0;
-  let converged = false;
-
-  while(iter < ETA_MAX_ITER){
-    iter++;
-    _collectedView = sim;
-    let rec;
-    try {
-      rec = computeRecommendationRaw(enabled);
-    } finally {
-      _collectedView = null;
+  const wins = [];
+  for(const site of enabled){
+    const ai = site.adds.map(a => adds.indexOf(a));
+    const si = site.skills.map(s => skills.indexOf(s));
+    for(const add of ai){
+      for(const bc of combos){
+        const slots = [];
+        for(const b of bc) for(const s of si) slots.push(id(b, add, s));
+        wins.push(slots);
+      }
     }
-    if(!rec || !rec.best) break;
-    const best = rec.best;
-    if(best.blanks <= 0){ converged = true; break; }
+    for(const sk of si){
+      for(const bc of combos){
+        const slots = [];
+        for(const b of bc) for(const a of ai) slots.push(id(b, a, sk));
+        wins.push(slots);
+      }
+    }
+  }
+  if(!wins.length) return null;
 
-    const expPer = best.blanks * pHit;
-    if(expPer < 0.01){ converged = true; break; }
-
-    const batch = Math.min(ETA_BATCH_SIZE, remain);
-    const filled = fillSimFromCandidate(sim, best, batch, srcMap, alpha);
-    if(filled <= 0){ converged = true; break; }
-    drops += filled / expPer;
-    remain -= filled;
-    if(remain <= 0){ converged = true; break; }
+  const keyWin = Array.from({ length: NK }, () => []);
+  const winBlanks = new Int16Array(wins.length);
+  for(let w = 0; w < wins.length; w++){
+    let m = 0;
+    for(const k of wins[w]){
+      keyWin[k].push(w);
+      if(copies[k] < caps[k]) m++;
+    }
+    winBlanks[w] = m;
   }
 
-  return { drops: Math.ceil(drops), remain, iter, converged };
+  // 剩余份数；顺带找出「当前启用点根本产不出」的组合
+  let B = 0, unreachable = 0;
+  for(let k = 0; k < NK; k++){
+    if(copies[k] >= caps[k]) continue;
+    if(!keyWin[k].length) unreachable++;
+    else B += caps[k] - copies[k];
+  }
+
+  return { wins, winBlanks, keyWin, copies, caps, B, unreachable, drop: state.doubleDrop ? 6 : 3 };
 }
 
-function getEtaEstimate(){
-  const key = computeEtaCacheKey();
-  if(key === _etaCacheKey && _etaCache !== null) return _etaCache;
-  const result = doEstimateRemainingDrops();
-  _etaCacheKey = key;
-  _etaCache = result;
-  return result;
+function etaRunTrajectory(m){
+  const copies = m.copies.slice();
+  const wb = m.winBlanks.slice();
+  let B = m.B;
+  let subs = 0;
+  while(B > 0){
+    // 选空白最多的窗口（与原推荐同口径；加权项实测无差别，这里省掉）
+    let best = -1, bm = 0;
+    for(let w = 0; w < wb.length; w++){
+      const v = wb[w];
+      if(v > bm){ bm = v; best = w; }
+    }
+    if(bm <= 0) break;
+    subs++;
+    const slots = m.wins[best];
+    const n = slots.length;
+    for(let t = 0; t < m.drop; t++){
+      const k = slots[(Math.random() * n) | 0];
+      if(copies[k] >= m.caps[k]) continue;
+      copies[k]++;
+      B--;
+      if(copies[k] >= m.caps[k]){
+        const lst = m.keyWin[k];
+        for(let i = 0; i < lst.length; i++) wb[lst[i]]--;
+      }
+    }
+  }
+  return subs;
+}
+
+function cancelEtaJob(){
+  if(_etaJob && _etaJob.timer) clearTimeout(_etaJob.timer);
+  _etaJob = null;
+}
+
+function etaMedian(samples){
+  const s = samples.slice().sort((a, b) => a - b);
+  return s[(s.length / 2) | 0];
+}
+
+function runEtaBatch(){
+  const job = _etaJob;
+  if(!job) return;
+  const budget = Math.min(ETA_TRAJ_BATCH, ETA_TRAJ_TARGET - job.samples.length);
+  for(let i = 0; i < budget; i++) job.samples.push(etaRunTrajectory(job.model));
+  if(job.samples.length < ETA_TRAJ_TARGET){
+    renderEtaHint({ pending: true, done: job.samples.length, total: ETA_TRAJ_TARGET, remain: job.model.B, unreachable: job.model.unreachable });
+    job.timer = setTimeout(runEtaBatch, 0);
+    return;
+  }
+  const res = {
+    median: etaMedian(job.samples),
+    n: job.samples.length,
+    remain: job.model.B,
+    unreachable: job.model.unreachable
+  };
+  _etaCache = res;
+  _etaCacheKey = job.key;
+  _etaJob = null;
+  renderEtaHint(res);
 }
 
 function scheduleEtaUpdate(){
   clearTimeout(_etaTimer);
-  _etaTimer = setTimeout(updateEtaHint, 120);
+  _etaTimer = setTimeout(startEtaEstimate, 120);
 }
 
-function updateEtaHint(){
-  const etaEl = document.getElementById('etaHint');
-  if(!etaEl) return;
-  const est = getEtaEstimate();
-  if(!est){
-    etaEl.textContent = '没有启用的刷取点，无法预估。';
+function startEtaEstimate(){
+  const el = document.getElementById('etaHint');
+  if(!el) return;
+  const key = computeEtaCacheKey();
+  if(_etaJob){                        // 同一状态正在算
+    if(_etaJob.key === key) return;
+    cancelEtaJob();
+  }
+  if(_etaCache && _etaCacheKey === key){ renderEtaHint(_etaCache); return; }
+
+  const model = buildEtaModel();
+  if(!model){
+    el.textContent = '没有启用的刷取点，无法预估。';
     return;
   }
-  if(est.drops <= 0){
-    etaEl.innerHTML = '✓ 全部组合已收集，已毕业！';
+  if(model.B <= 0){
+    const res = { median: 0, n: 0, remain: 0, unreachable: model.unreachable };
+    _etaCache = res;
+    _etaCacheKey = key;
+    renderEtaHint(res);
     return;
   }
-  const warnStr = est.converged ? '' : ' <span style="color:var(--warn)">估算未完全收敛，实际可能更多。</span>';
-  etaEl.innerHTML = `分段模拟预计还需约 <b>${est.drops}</b> 次提交。${warnStr}`;
+  _etaJob = { key, model, samples: [], timer: null };
+  renderEtaHint({ pending: true, done: 0, total: ETA_TRAJ_TARGET, remain: model.B, unreachable: model.unreachable });
+  runEtaBatch();
+}
+
+function renderEtaHint(res){
+  const el = document.getElementById('etaHint');
+  if(!el) return;
+  const uncov = res.unreachable
+    ? `<br><span style="color:var(--warn)">另有 ${res.unreachable} 个组合当前启用点产不出，已排除。</span>`
+    : '';
+  if(res.remain <= 0){
+    el.innerHTML = '✓ 所需份数已全部到手，已毕业！' + uncov;
+    return;
+  }
+  if(res.pending){
+    el.innerHTML = `蒙特卡洛模拟中… <b>${res.done}/${res.total}</b> 条轨迹`;
+    return;
+  }
+  el.innerHTML = `蒙特卡洛模拟（${res.n} 条轨迹取中位）预计还需约 <b>${res.median}</b> 次提交。` + uncov;
 }
 
 const CELEBRATED_KEY = STORAGE_KEY + '_celebrated';
@@ -2561,7 +2485,6 @@ function initDetailFilters(){
   fb.innerHTML = '<option value="">全部</option>' + state.data.baseAttrs.map(a => `<option>${a}</option>`).join('');
   fa.innerHTML = '<option value="">全部</option>' + state.data.allAddAttrs.map(a => `<option>${a}</option>`).join('');
   fs.innerHTML = '<option value="">全部</option>' + state.data.allSkillAttrs.map(a => `<option>${a}</option>`).join('');
-  refreshAllCustomSelects();
 }
 
 function renderDetail(){
@@ -3045,6 +2968,7 @@ function deleteEditKey(){
     ? `删除该组合的第 ${currentEditIndex + 1} 份（共 ${arr.length} 份，删除后剩 ${arr.length - 1} 份）？`
     : `从已收集记录中删除此基质？该操作不可恢复。`;
   if(!confirm(msg)) return;
+  makeSnapshot('删除份前');
   arr.splice(currentEditIndex, 1);
   if(arr.length === 0){
     // 删掉整个 key（连带清掉自定义容量）
@@ -3093,10 +3017,15 @@ function renderGaps(){
         if(gs && gs !== s) continue;
         if(gsrc && src > gsrc) continue;
         const arr = getCollectedArr(key);
-        list.push({ b, a, s, src, sites: getSites(srcMap, a, s), have: arr.length, need: getCapacity(key) });
+        const bestCost = arr.length ? arr.reduce((m, x) => (x.cost < m ? x.cost : m), arr[0].cost) : null;
+        list.push({ b, a, s, src, sites: getSites(srcMap, a, s), have: arr.length, need: getCapacity(key), bestCost });
       }
 
-  list.sort((x, y) => x.src - y.src || x.b.localeCompare(y.b) || x.a.localeCompare(y.a) || x.s.localeCompare(y.s));
+  // 24 个槽等概率，来源数不影响难度；按 基础 → 附加 → 技能 的固定顺序排，方便对照详细清单
+  const bOrd = v => state.data.baseAttrs.indexOf(v);
+  const aOrd = v => state.data.allAddAttrs.indexOf(v);
+  const sOrd = v => state.data.allSkillAttrs.indexOf(v);
+  list.sort((x, y) => bOrd(x.b) - bOrd(y.b) || aOrd(x.a) - aOrd(y.a) || sOrd(x.s) - sOrd(y.s));
   _lastGapList = list;
 
   const pill = document.getElementById('gapPill');
@@ -3113,7 +3042,9 @@ function renderGaps(){
     return;
   }
   box.innerHTML = list.map(g => {
-    const slotText = g.have > 0 ? `<span style="color:var(--warn);font-size:10px;margin-right:6px">已 ${g.have}/${g.need} 份</span>` : '';
+    const slotText = g.have > 0
+      ? `<span style="color:var(--warn);font-size:10px;margin-right:6px">已 ${g.have}/${g.need} 份${g.bestCost !== null ? `（最佳余 ${g.bestCost}）` : ''}</span>`
+      : '';
     return `
     <div class="gap-item">
       ${slotText}
@@ -3127,7 +3058,7 @@ function renderGaps(){
 function copyGapList(){
   if(!_lastGapList.length){ toast('当前列表为空'); return; }
   const text = _lastGapList.map(g => {
-    const slot = g.have > 0 ? `[已 ${g.have}/${g.need} 份] ` : '';
+    const slot = g.have > 0 ? `[已 ${g.have}/${g.need} 份${g.bestCost !== null ? `，最佳余 ${g.bestCost}` : ''}] ` : '';
     return `${slot}${g.b} · ${g.a} · ${g.s}　来源 ${g.src}：${g.sites.join('、')}`;
   }).join('\n');
   const ta = document.createElement('textarea');
@@ -3157,7 +3088,7 @@ function getWeaponStatus(w){
   if(arr.some(x => x.cost <= 0)) return 'complete';  // 已毕业：有满级份
   return 'incomplete';                               // 未毕业：有份但无满级
 }
-function renderWeaponSlots(key, demand){
+function renderWeaponSlots(key){
   const displayDemand = getCapacity(key);
   const arr = getCollectedArr(key);
   const sorted = arr.slice().sort((a, b) => {
@@ -3272,7 +3203,6 @@ function renderWeapons(){
     if(!weaponMap[k]) weaponMap[k] = [];
     weaponMap[k].push(w);
   });
-  const demandMap = buildWeaponDemandMap();
 
   grid.innerHTML = list.map(w => {
     const key = makeKey(w.base, w.add, w.skill);
@@ -3294,9 +3224,8 @@ function renderWeapons(){
     const sharedHtml = sharedWeapons.length
       ? `<div class="weapon-shared">共用该基质：<b>${sharedWeapons.map(x => x.name).join('、')}</b></div>`
       : '';
-    const demand = demandMap[key] || 1;
     const showSlots = getCapacity(key) > 1 || hasCustomCapacity(key);
-    const countHtml = showSlots ? renderWeaponSlots(key, demand) : '';
+    const countHtml = showSlots ? renderWeaponSlots(key) : '';
     const targeted = isWeaponTargeted(w);
 
     return `<div class="weapon-card ${cardCls}">
@@ -3514,7 +3443,10 @@ function undoHistory(origIdx){
       if(i >= 0) arr.splice(i, 1);
       setCollectedArr(r.key, arr);
     } else if(r.status === 'dup' && r.keep){
-      const idx = state.pendingDeletions.findIndex(p => p.key === r.key && p.time === h.time);
+      // 优先用 iid 精确定位被替换的旧份；老记录没有 replacedIid 时退回 key+time
+      let idx = -1;
+      if(r.replacedIid) idx = state.pendingDeletions.findIndex(p => p.iid === r.replacedIid);
+      if(idx < 0) idx = state.pendingDeletions.findIndex(p => p.key === r.key && p.time === h.time);
       if(idx >= 0){
         const old = state.pendingDeletions.splice(idx, 1)[0];
         const i = arr.findIndex(x => x.iid === r.iid);
@@ -3624,6 +3556,9 @@ function getDropItems(){
 
 function handleSubmitDrop(){
   const items = getDropItems();
+  const bad = items.findIndex(it => !it.base || !it.add || !it.skill
+    || !Number.isFinite(it.baseLv) || !Number.isFinite(it.addLv) || !Number.isFinite(it.skillLv));
+  if(bad >= 0){ toast(`第 ${bad + 1} 张卡字段不完整，请检查后再提交`); return; }
   const results = [];
   const now = Date.now();
   items.forEach((item, idx) => {
@@ -3652,7 +3587,7 @@ function handleSubmitDrop(){
         state.pendingDeletions.push({ key, baseLv: worst.baseLv, addLv: worst.addLv, skillLv: worst.skillLv, cost: worst.cost, time: now, iid: worst.iid });
         arr[worstIdx] = newInst;
         setCollectedArr(key, arr);
-        results.push({ key, status:'dup', keep:true, cost, idx, iid: newInst.iid });
+        results.push({ key, status:'dup', keep:true, cost, idx, iid: newInst.iid, replacedIid: worst.iid });
         if(box){ box.classList.add('is-replace'); const l = box.querySelector('.result-label'); if(l) l.textContent = '替换 · 旧入暂存'; }
       } else {
         results.push({ key, status:'dup', keep:false, cost, idx });
@@ -3673,10 +3608,36 @@ function handleSubmitDrop(){
   if(activeTab === 'gaps') renderGaps();
   if(activeTab === 'weapons') renderWeapons();
   if(activeTab === 'history'){ renderSevenDayChart(); renderHistory(); }
+
+  // 提交后自动解除锁定：推荐每轮都会变，沿用旧窗口会明显变慢
+  const unlocked = !!currentLock;
+  currentLock = null;
+  renderDropForm();
+  // 重建表单会清掉结果标记，按 results 重新标一遍
+  results.forEach(r => {
+    const box = document.getElementById(`drop-item-${r.idx}`);
+    if(!box) return;
+    const label = box.querySelector('.result-label');
+    if(r.status === 'new'){
+      box.classList.add('is-new');
+      if(label){
+        const cap = getCapacity(r.key);
+        label.textContent = cap > 1 ? `新 · 第 ${getCollectedArr(r.key).length}/${cap} 份` : '新 · 保留';
+      }
+    } else if(r.keep){
+      box.classList.add('is-replace');
+      if(label) label.textContent = '替换 · 旧入暂存';
+    } else {
+      box.classList.add('is-skip');
+      if(label) label.textContent = '重复 · 丢弃';
+    }
+  });
+
   let msg = '已提交，新 ' + results.filter(r => r.status === 'new').length + ' 个';
   if(removedTargets.length){
     msg += ` · 目标「${removedTargets.map(t => t.base + '·' + toShortAdd(t.add) + '·' + t.skill).join('，')}」已达成`;
   }
+  if(unlocked) msg += ' · 已解除锁定，请按最新推荐重新采纳';
   toast(msg);
 }
 
@@ -3766,9 +3727,6 @@ function renderSettings(){
   const dd = document.getElementById('doubleDropToggle');
   if(dd) dd.checked = !!state.doubleDrop;
 
-  const ea = document.getElementById('exactAlgoToggle');
-  if(ea) ea.checked = !!state.exactAlgo;
-
   const ts = document.getElementById('themeSelect');
   if(ts) ts.value = getStoredTheme();
 
@@ -3850,7 +3808,6 @@ function handleImport(file){
       if(typeof payload.recentHighlightDays === 'number') state.recentHighlightDays = payload.recentHighlightDays;
       if(typeof payload.tieBreaker === 'string') state.tieBreaker = payload.tieBreaker;
       if(typeof payload.doubleDrop === 'boolean') state.doubleDrop = payload.doubleDrop;
-      if(typeof payload.exactAlgo === 'boolean') state.exactAlgo = payload.exactAlgo;
 
       state.weapons = deepClone(EXT_WEAPONS);
       if(!state.data) state.data = deepClone(DEFAULT_DATA);
@@ -3859,7 +3816,14 @@ function handleImport(file){
       cleanEnabledSites(state);
       migrateNames();
 
-      saveState(); renderAll(); toast('导入成功');
+      const st = normalizeCollectedInPlace();
+      saveState(); renderAll();
+      const fixParts = [];
+      if(st.fixedFields) fixParts.push(`校正 ${st.fixedFields} 个字段`);
+      if(st.dropped) fixParts.push(`丢弃 ${st.dropped} 条非法记录`);
+      if(st.merged) fixParts.push(`合并 ${st.merged} 组重复键`);
+      if(st.overCap) fixParts.push(`${st.overCap} 个组合份数超容量`);
+      toast(fixParts.length ? `导入成功（${fixParts.join('，')}）` : '导入成功');
     }catch(e){ toast('导入失败：' + e.message); }
   };
   reader.readAsText(file);
@@ -3975,6 +3939,51 @@ function handleValidate(){
   renderValidateResult(_validateIssues);
 }
 
+// 规范化 collected：只改真正有问题的字段；不做裁剪，只统计超容量
+function normalizeCollectedInPlace(){
+  const cfg = state.data.levelConfig;
+  const next = {};
+  const usedIids = new Set();
+  let entries = 0, fixedFields = 0, dropped = 0, merged = 0, overCap = 0;
+
+  for(const key in state.collected){
+    const raw = state.collected[key];
+    const arr = Array.isArray(raw) ? raw : [raw];
+    const parts = String(key).split('|');
+    if(parts.length !== 3){ next[key] = arr; continue; }
+    const [b, a0, s] = parts;
+    const a = toFullAdd(a0);
+    const nk = makeKey(b, a, s);
+    const out = [];
+    for(const inst of arr){
+      if(!inst || typeof inst !== 'object' || Array.isArray(inst)){ dropped++; continue; }
+      const copy = { ...inst };
+      const bl = Math.min(cfg.base.max, Math.max(1, parseInt(copy.baseLv, 10) || 1));
+      const al = Math.min(cfg.add.max, Math.max(1, parseInt(copy.addLv, 10) || 1));
+      const sl = Math.min(cfg.skill.max, Math.max(1, parseInt(copy.skillLv, 10) || 1));
+      if(bl !== copy.baseLv){ copy.baseLv = bl; fixedFields++; }
+      if(al !== copy.addLv){ copy.addLv = al; fixedFields++; }
+      if(sl !== copy.skillLv){ copy.skillLv = sl; fixedFields++; }
+      const need = totalCost(copy.baseLv, copy.addLv, copy.skillLv);
+      if(copy.cost !== need){ copy.cost = need; fixedFields++; }
+      if(!copy.iid || usedIids.has(copy.iid)){ copy.iid = newIid(); fixedFields++; }
+      usedIids.add(copy.iid);
+      if(!copy.time){ copy.time = Date.now(); fixedFields++; }
+      if(!copy.from){ copy.from = '校验修复'; fixedFields++; }
+      out.push(copy);
+    }
+    entries++;
+    if(next[nk]){ merged++; next[nk] = next[nk].concat(out); }
+    else next[nk] = out;
+  }
+
+  state.collected = next;
+  for(const key in state.collected){
+    if(getCollectedArr(key).length > getCapacity(key)) overCap++;
+  }
+  return { entries, fixedFields, dropped, merged, overCap };
+}
+
 function fixAllValidated(){
   const issues = _validateIssues;
   if(!issues.length){ toast('无问题'); return; }
@@ -3983,56 +3992,16 @@ function fixAllValidated(){
   if(!confirm(`修复 ${fixableIssues.length} 处问题？将直接修改本地数据并自动打快照。`)) return;
   makeSnapshot('数据校验修复前');
 
-  const cfg = state.data.levelConfig;
-  const newCollected = {};
-  const usedIids = new Set();
-  let fixedCount = 0;
-
-  for(const key in state.collected){
-    const raw = state.collected[key];
-    const arr = Array.isArray(raw) ? raw : [raw];
-    const parts = key.split('|');
-    if(parts.length !== 3){
-      newCollected[key] = arr;
-      continue;
-    }
-    let [b, a, s] = parts;
-    if(!state.data.allAddAttrs.includes(a)){
-      const fixedA = toFullAdd(a);
-      if(state.data.allAddAttrs.includes(fixedA)) a = fixedA;
-    }
-    const nk = makeKey(b, a, s);
-
-    const fixedArr = arr.map(inst => {
-      if(!inst || typeof inst !== 'object') return inst;
-      const copy = { ...inst };
-      copy.baseLv = Math.min(cfg.base.max, Math.max(1, parseInt(copy.baseLv, 10) || 1));
-      copy.addLv = Math.min(cfg.add.max, Math.max(1, parseInt(copy.addLv, 10) || 1));
-      copy.skillLv = Math.min(cfg.skill.max, Math.max(1, parseInt(copy.skillLv, 10) || 1));
-      copy.cost = totalCost(copy.baseLv, copy.addLv, copy.skillLv);
-      if(!copy.iid || usedIids.has(copy.iid)){
-        copy.iid = newIid();
-      }
-      usedIids.add(copy.iid);
-      if(!copy.time) copy.time = Date.now();
-      if(!copy.from) copy.from = '校验修复';
-      return copy;
-    });
-
-    if(newCollected[nk]){
-      newCollected[nk] = newCollected[nk].concat(fixedArr);
-    } else {
-      newCollected[nk] = fixedArr;
-    }
-    fixedCount++;
-  }
-
-  state.collected = newCollected;
+  const st = normalizeCollectedInPlace();
   saveState();
   renderAll();
   _validateIssues = [];
+  const parts = [`修正 ${st.fixedFields} 个字段`];
+  if(st.merged) parts.push(`合并 ${st.merged} 组重复键`);
+  if(st.dropped) parts.push(`丢弃 ${st.dropped} 条非法记录`);
+  if(st.overCap) parts.push(`${st.overCap} 个组合份数超容量（未删除）`);
   const box = document.getElementById('validateResult');
-  if(box) box.innerHTML = `<div class="hint" style="color:var(--ok)">✓ 已修复 ${fixedCount} 条记录。</div>`;
+  if(box) box.innerHTML = `<div class="hint" style="color:var(--ok)">✓ 修复完成：${parts.join('，')}。共 ${st.entries} 个组合。</div>`;
   const fixAllBtn = document.getElementById('validateFixAllBtn');
   if(fixAllBtn) fixAllBtn.style.display = 'none';
   toast('修复完成');
@@ -4058,7 +4027,6 @@ function renderAll(){
   renderHistory();
   closeEditModal();
   closeQuickAddModal();
-  refreshAllCustomSelects();
 }
 
 function bindEvents(){
@@ -4077,15 +4045,7 @@ function bindEvents(){
   });
 
   document.getElementById('refreshBtn').addEventListener('click', () => {
-    if(state.exactAlgo){
-      withLoadingFeedback(
-        document.getElementById('refreshBtn'),
-        document.getElementById('recommendBody'),
-        () => renderRecommend(true)
-      );
-    } else {
-      renderRecommend(true);
-    }
+    renderRecommend(true);
   });
   document.getElementById('targetsBtn').addEventListener('click', openTargetsModal);
   document.getElementById('targetsAddBtn').addEventListener('click', () => {
@@ -4269,15 +4229,6 @@ function bindEvents(){
       toast(state.doubleDrop ? '已默认双倍（6 个）' : '已默认普通（3 个）');
     });
   }
-  const ea = document.getElementById('exactAlgoToggle');
-  if(ea){
-    ea.addEventListener('change', e => {
-      state.exactAlgo = e.target.checked;
-      saveState();
-      renderRecommend();
-      toast(state.exactAlgo ? '精确算法已开启' : '精确算法已关闭');
-    });
-  }
   const ts = document.getElementById('themeSelect');
   if(ts){
     ts.addEventListener('change', e => {
@@ -4391,8 +4342,6 @@ function bindEvents(){
 /* ============================================================
  *  原生 select 美化
  * ============================================================ */
-const _csSyncMap = new WeakMap();   // 保留空壳，避免别处调用报错
-
 function enhanceSelect(sel){
   if(!sel || sel.tagName !== 'SELECT') return;
   if(sel.dataset.csEnhanced === '1') return;
@@ -4409,16 +4358,6 @@ function enhanceAllSelectsIn(root){
   if(!root.querySelectorAll) return;
   root.querySelectorAll('select:not([data-cs-enhanced])').forEach(enhanceSelect);
 }
-
-function refreshAllCustomSelects(){
-  // 无需操作：原生 select 会自动同步显示
-}
-
-// 以下函数全部保留为空壳，避免别处调用报错
-function openCustomDropdown(){}
-function closeCustomDropdown(){}
-function moveHover(){}
-let _activeCustomSelect = null;
 
 /* ============================================================
  *  设备识别
