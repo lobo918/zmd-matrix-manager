@@ -278,6 +278,9 @@ button.secondary:disabled:hover{background:var(--card3)}
 .rec-stats{margin-top:5px;padding:5px 8px;background:var(--card2);border-radius:var(--radius);font-size:10.5px;color:var(--text2);line-height:1.5;border:1px solid var(--border);}
 .rec-stats b{color:var(--text);font-weight:600}
 .rec-stats .ok{color:var(--ok);font-weight:600}
+.rec-lock-note{margin-top:6px;padding-left:6px;border-left:2px solid var(--border2);font-size:10.5px;line-height:1.45;color:var(--dim)}
+.rec-lock-note b{color:var(--text2);font-weight:600}
+.rec-lock-note.ok{color:var(--ok);border-left-color:var(--ok)}
 .rec-adopt{background:rgba(91,163,255,.12);border:1px solid var(--accent-dim);color:var(--accent);width:100%;font-weight:600;padding:6px 10px;font-size:11px;}
 .rec-adopt:hover{background:rgba(91,163,255,.2);border-color:var(--accent)}
 .uncov-warn{background:rgba(240,85,69,.1);border:1px solid rgba(240,85,69,.35);border-radius:var(--radius);padding:5px 8px;margin-top:6px;font-size:10.5px;color:#ff9a8e;line-height:1.4;}
@@ -985,7 +988,7 @@ html.is-phone select.cs-native{
 /* ============================================================
  *  常量
  * ============================================================ */
-const APP_VERSION = '1.2';
+const APP_VERSION = '1.3';
 const DEFAULT_DATA = {
   baseAttrs: ['敏捷', '力量', '意志', '智识', '主能力'],
   allAddAttrs: [
@@ -1879,6 +1882,37 @@ function flashRecommendCard(){
   card._flashTimer = setTimeout(() => card.classList.remove('rec-flash'), 950);
 }
 
+// 当前锁定窗口还剩几个未满的槽
+function lockWindowBlanks(lock){
+  const site = getAllSites().find(s => s.key === lock.siteKey);
+  if(!site) return 0;
+  let n = 0;
+  if(lock.lockType === 'add'){
+    for(const b of lock.baseCombo){
+      for(const s of site.skills){
+        if(!isKeySaturated(makeKey(b, lock.lockValue, s))) n++;
+      }
+    }
+  } else {
+    for(const b of lock.baseCombo){
+      for(const a of site.adds){
+        if(!isKeySaturated(makeKey(b, a, lock.lockValue))) n++;
+      }
+    }
+  }
+  return n;
+}
+
+// 当前锁定与最新推荐是否是同一个窗口
+function lockMatchesRec(lock, rec){
+  if(!lock || !rec) return false;
+  if(lock.siteKey !== rec.site.key) return false;
+  if(lock.lockType !== rec.lockType || lock.lockValue !== rec.lockValue) return false;
+  const a = lock.baseCombo.slice().sort().join('|');
+  const b = rec.baseCombo.slice().sort().join('|');
+  return a === b;
+}
+
 function renderRecommend(forceFlash){
   const body = document.getElementById('recommendBody');
   const adoptBtn = document.getElementById('adoptRecBtn');
@@ -1945,11 +1979,23 @@ function renderRecommend(forceFlash){
     </div>
   ` : '';
 
+  // 你当前锁着的窗口 vs 最新推荐：只提示，不强制解锁
+  let lockNote = '';
+  if(currentLock){
+    if(lockMatchesRec(currentLock, rec)){
+      lockNote = `<div class="rec-lock-note ok">✓ 当前锁定与推荐一致</div>`;
+    } else {
+      const lb = lockWindowBlanks(currentLock);
+      lockNote = `<div class="rec-lock-note">当前锁定窗口还剩 <b>${lb}</b> 个空白，推荐的这个有 <b>${rec.blanks}</b> 个；刷完这一轮可点下方「采纳」切换。</div>`;
+    }
+  }
+
   body.innerHTML = `
     <div class="rec-region">${rec.site.region}</div>
     <div class="rec-site">${rec.site.name}</div>
     <div class="rec-lock-row"><span class="rec-lock-key">${lockLabel}</span><span class="rec-lock-val">${lockValDisplay}</span></div>
     <div class="rec-lock-row"><span class="rec-lock-key">锁基础</span><span class="rec-lock-val">${rec.baseCombo.join(' · ')}</span></div>
+    ${lockNote}
     ${targetBlock}
     <div class="rec-stats">
       空白命中 <b>${pct}%</b>（${rec.blanks}/${rec.total}）<br>
@@ -3563,35 +3609,11 @@ function handleSubmitDrop(){
   if(activeTab === 'weapons') renderWeapons();
   if(activeTab === 'history'){ renderSevenDayChart(); renderHistory(); }
 
-  // 提交后自动解除锁定：推荐每轮都会变，沿用旧窗口会明显变慢
-  const unlocked = !!currentLock;
-  currentLock = null;
-  renderDropForm();
-  // 重建表单会清掉结果标记，按 results 重新标一遍
-  results.forEach(r => {
-    const box = document.getElementById(`drop-item-${r.idx}`);
-    if(!box) return;
-    const label = box.querySelector('.result-label');
-    if(r.status === 'new'){
-      box.classList.add('is-new');
-      if(label){
-        const cap = getCapacity(r.key);
-        label.textContent = cap > 1 ? `新 · 第 ${getCollectedArr(r.key).length}/${cap} 份` : '新 · 保留';
-      }
-    } else if(r.keep){
-      box.classList.add('is-replace');
-      if(label) label.textContent = '替换 · 旧入暂存';
-    } else {
-      box.classList.add('is-skip');
-      if(label) label.textContent = '重复 · 丢弃';
-    }
-  });
-
+  // 保留本轮录入的内容和锁定，方便核对刚提交了什么；是否切窗口看推荐卡上的提示
   let msg = '已提交，新 ' + results.filter(r => r.status === 'new').length + ' 个';
   if(removedTargets.length){
     msg += ` · 目标「${removedTargets.map(t => t.base + '·' + toShortAdd(t.add) + '·' + t.skill).join('，')}」已达成`;
   }
-  if(unlocked) msg += ' · 已解除锁定，请按最新推荐重新采纳';
   toast(msg);
 }
 
